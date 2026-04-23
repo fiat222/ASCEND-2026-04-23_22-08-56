@@ -1,0 +1,57 @@
+name: Auto PR from PR branches
+
+on:
+  push:
+    branches:
+      - 'PR/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check if PR already exists
+        id: check_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr list \
+            --head "${{ github.ref_name }}" \
+            --base main \
+            --json url \
+            --jq '.[0].url' 2>/dev/null || echo "")
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check_pr.outputs.pr_url == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          # ตัด PR/ prefix ออกเพื่อใช้เป็น title
+          FEATURE_NAME="${BRANCH#PR/}"
+          
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "[$FEATURE_NAME] ${{ github.event.head_commit.message }}" \
+            --body "## Summary
+          Auto-generated PR from branch \`$BRANCH\`
+
+          **Feature:** \`$FEATURE_NAME\`
+          **Commit:** ${{ github.sha }}
+          **Author:** ${{ github.actor }}
+
+          ---
+          > Merge this PR after review and testing."
+
+      - name: PR already exists
+        if: steps.check_pr.outputs.pr_url != ''
+        run: |
+          echo "PR already exists: ${{ steps.check_pr.outputs.pr_url }}"
