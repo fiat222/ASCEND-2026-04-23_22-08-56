@@ -1,3 +1,19 @@
+# ASCEND — Project Workflow Rules
+
+## Session Rules (ALWAYS ACTIVE)
+1. **Caveman full mode** — compressed comms every response, no filler
+2. **RTK always** — prefix all CLI commands with `rtk` (see below)
+3. **PlanMode before builds** — any major feature or build → use EnterPlanMode first, get approval, then implement
+4. **Update context.md** — after every meaningful change, append to Progress Log in `context.md`
+
+## context.md
+- Path: `D:\PSU\Unity Game\ASCEND\context.md`
+- Gitignored — local only, never committed
+- Always read at session start for current project state
+- Always write progress after completing work
+
+---
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 396579d84280fd84cbe6e040026a57bf, type: 3}
+  m_Name: 2H Hammer
+  m_EditorClassIdentifier: 
+  weaponName: 2Hand Hammer
+  weaponType: 1
+  damage: 0
+  prefab: {fileID: 2032301167535643234, guid: cf18c84c8a89f14489fc2025ec22bdcb, type: 3}
