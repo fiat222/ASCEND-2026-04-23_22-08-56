@@ -9,6 +9,8 @@ on:
 jobs:
   notify-discord:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Notify — PR opened / reopened
         if: github.event.action == 'opened' || github.event.action == 'reopened'
