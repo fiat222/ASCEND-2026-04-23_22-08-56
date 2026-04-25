@@ -5,11 +5,36 @@ on:
     types: [opened, reopened, closed]
     branches:
       - main
+  push:
+    branches:
+      - main
 
 jobs:
   notify-discord:
     runs-on: ubuntu-latest
     steps:
+      - name: Notify — Push to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"🚩 New Push to main\",
+                \"description\": \"**[${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})**\",
+                \"color\": 10181046,
+                \"fields\": [
+                  { \"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true },
+                  { \"name\": \"Commit\", \"value\": \"[\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\", \"inline\": true }
+                ],
+                \"footer\": { \"text\": \"${{ github.repository }}\" },
+                \"timestamp\": \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\"
+              }]
+            }" \
+            "$DISCORD_WEBHOOK"
+
       - name: Notify — PR opened / reopened
         if: github.event.action == 'opened' || github.event.action == 'reopened'
         env:

@@ -51,6 +51,32 @@ jobs:
           ---
           > Merge this PR after review and testing."
 
+      - name: Notify Discord (PR Created)
+        if: steps.check_pr.outputs.pr_url == ''
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          FEATURE_NAME="${BRANCH#PR/}"
+          PR_URL=$(gh pr list --head "$BRANCH" --json url --jq '.[0].url')
+          
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"🚀 Auto PR Created\",
+                \"description\": \"**[$FEATURE_NAME]($PR_URL)**\",
+                \"color\": 3447003,
+                \"fields\": [
+                  { \"name\": \"Branch\", \"value\": \"\`$BRANCH\`\", \"inline\": true },
+                  { \"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true },
+                  { \"name\": \"Commit\", \"value\": \"[\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\", \"inline\": false }
+                ],
+                \"footer\": { \"text\": \"${{ github.repository }}\" },
+                \"timestamp\": \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\"
+              }]
+            }" \
+            "$DISCORD_WEBHOOK"
+
       - name: PR already exists
         if: steps.check_pr.outputs.pr_url != ''
         run: |
