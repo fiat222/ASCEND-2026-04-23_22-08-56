@@ -15,15 +15,19 @@ public class PlayerTest : MonoBehaviour
     [SerializeField] private string moveXParam = "MoveX";
     [SerializeField] private string moveYParam = "MoveY";
     [SerializeField] private string isRunParam = "IsRun";
-    [SerializeField] private string idle1HParam     = "Is1HIdle";
-    [SerializeField] private string idle2HParam     = "Is2HIdle";
-    [SerializeField] private string attack1HParam   = "Attack1H";
+    [SerializeField] private string idle1HParam      = "Is1HIdle";
+    [SerializeField] private string idle2HParam      = "Is2HIdle";
+    [SerializeField] private string idleSpearParam   = "IsSpearIdle";
+    [SerializeField] private string attack1HParam    = "Attack1H";
     [SerializeField] private string attack2HParam    = "Attack2H";
     [SerializeField] private string attackMagicParam = "AttackMagic";
+    [SerializeField] private string attackShieldParam = "AttackShield";
+    [SerializeField] private string attackSpearParam  = "AttackSpear";
     [SerializeField] private int attackAnimatorLayer = 1;
 
     [Header("Weapon")]
     [SerializeField] private Transform weaponSlot;
+    [SerializeField] private Transform offHandSlot;
     [SerializeField] private HotbarController hotbar;
 
     private CharacterController _cc;
@@ -127,6 +131,8 @@ public class PlayerTest : MonoBehaviour
         {
             AttackType.TwoHand => attack2HParam,
             AttackType.Magic   => attackMagicParam,
+            AttackType.Shield  => attackShieldParam,
+            AttackType.Spear   => attackSpearParam,
             _                  => attack1HParam
         };
     }
@@ -155,13 +161,16 @@ public class PlayerTest : MonoBehaviour
         }
 
         _equippedSO = so;
-        bool armed2H = so != null && so.IsTwoHanded;
-        bool armed1H = so != null && !so.IsTwoHanded;
-        _anim?.SetBool(idle1HParam, armed1H);
-        _anim?.SetBool(idle2HParam, armed2H);
+        WeaponType? type = so?.weaponType;
+        _anim?.SetBool(idle1HParam,    type is WeaponType.OneHand or WeaponType.Staff or WeaponType.Shield);
+        _anim?.SetBool(idle2HParam,    type == WeaponType.TwoHand);
+        _anim?.SetBool(idleSpearParam, type == WeaponType.Spear);
 
-        if (so == null || so.prefab == null || weaponSlot == null) return;
-        _equippedWeapon = Instantiate(so.prefab, weaponSlot);
-        _equippedWeapon.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+        if (so == null || so.prefab == null) return;
+        Transform slot = (so.useOffHand && offHandSlot != null) ? offHandSlot : weaponSlot;
+        if (slot == null) return;
+        _equippedWeapon = Instantiate(so.prefab, slot);
+        _equippedWeapon.transform.localPosition = so.gripPositionOffset;
+        _equippedWeapon.transform.localEulerAngles = so.gripRotationOffset;
     }
 }
