@@ -42,6 +42,12 @@
 - `HotbarController.cs` — weapon prefab list, scroll wheel + keys 1-9 selection, `OnSlotChanged` event
 - `PlayerTest.cs` — removed E-key equip; subscribes to `OnSlotChanged`, equips/unequips via `EquipWeapon(prefab)`
 
+### 2026-04-26
+- `WeaponSO.cs` — added `Sprite icon` field; added `Shield`+`Spear` to WeaponType/AttackType enums; added `gripPositionOffset` (Vector3), `gripRotationOffset` (Vector3 euler), `useOffHand` (bool) under [Header("Grip")]
+- `HotbarController.cs` — 9 fixed slots; `slotIcons[9]` (Image) + `slotHighlights[9]` (GameObject); `RefreshUI()` sets sprite/enabled per slot; `SetHighlight()` activates selected slot highlight
+- `PlayerTest.cs` — added `idleSpearParam`/`attackShieldParam`/`attackSpearParam`; `EquipWeapon` sets idle bools per WeaponType (Shield→1H idle, Spear→spear idle); `GetAttackParam` handles Shield/Spear triggers
+- `PlayerTest.cs` — added `offHandSlot` (Transform) for left-hand weapons (e.g. Shield); `EquipWeapon` routes to `offHandSlot` if `so.useOffHand`; applies `gripPositionOffset`/`gripRotationOffset` via `localPosition`/`localEulerAngles` (not SetLocalPositionAndRotation — rotation bug workaround)
+
 ## TODOs / Next Steps
 - [x] WASD movement + left click attack (networked)
 - [x] Animator: Base Layer blend tree (MoveX/MoveY) + Upper layer (Attack, weight=1, upper body mask)
