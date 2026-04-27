@@ -733,8 +733,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 5
   runSpeed: 8
-  rotationSpeed: 500
-  inputSmoothing: 5
+  rotationSpeed: 200
+  inputSmoothing: 20
   gravity: -9.81
   moveXParam: MoveX
   moveYParam: MoveY
@@ -751,6 +751,7 @@ MonoBehaviour:
   weaponSlot: {fileID: 988986912}
   offHandSlot: {fileID: 78338695}
   hotbar: {fileID: 444550409}
+  weaponTrail: {fileID: 0}
 --- !u!1 &444550405
 GameObject:
   m_ObjectHideFlags: 0
