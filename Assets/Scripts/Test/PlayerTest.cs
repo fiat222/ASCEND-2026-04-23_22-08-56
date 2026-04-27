@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using Drakkar.GameUtils;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerTest : MonoBehaviour
@@ -29,6 +30,9 @@ public class PlayerTest : MonoBehaviour
     [SerializeField] private Transform weaponSlot;
     [SerializeField] private Transform offHandSlot;
     [SerializeField] private HotbarController hotbar;
+
+    [Header("Trail")]
+    [SerializeField] private DrakkarTrail weaponTrail;
 
     private CharacterController _cc;
     private Animator _anim;
@@ -147,7 +151,14 @@ public class PlayerTest : MonoBehaviour
 
         AnimatorStateInfo state = _anim.GetCurrentAnimatorStateInfo(attackAnimatorLayer);
         float clipLength = state.length > 0.1f ? state.length : 1f;
+
+        // เริ่ม trail พร้อม animation
+        weaponTrail?.Begin();
+
         yield return new WaitForSeconds(clipLength);
+
+        // หยุด trail พร้อม animation จบ
+        weaponTrail?.End();
 
         _isAttacking = false;
     }
@@ -166,11 +177,14 @@ public class PlayerTest : MonoBehaviour
         _anim?.SetBool(idle2HParam,    type == WeaponType.TwoHand);
         _anim?.SetBool(idleSpearParam, type == WeaponType.Spear);
 
+        weaponTrail = null;
+
         if (so == null || so.prefab == null) return;
         Transform slot = (so.useOffHand && offHandSlot != null) ? offHandSlot : weaponSlot;
         if (slot == null) return;
         _equippedWeapon = Instantiate(so.prefab, slot);
         _equippedWeapon.transform.localPosition = so.gripPositionOffset;
         _equippedWeapon.transform.localEulerAngles = so.gripRotationOffset;
+        weaponTrail = _equippedWeapon.GetComponentInChildren<DrakkarTrail>();
     }
 }
