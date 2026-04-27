@@ -13,6 +13,7 @@
 # Claude Code local context (not for version control)
 context.md
 CLAUDE.md
+.agent/
 
 .utmp/
 /[Ll]ibrary/
