@@ -147,7 +147,7 @@ Transform:
   m_GameObject: {fileID: 78338694}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.018, y: 0.094, z: 0}
+  m_LocalPosition: {x: -0.02, y: 0.094, z: -0.003}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -719,7 +719,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 683044934274976496, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
   m_PrefabInstance: {fileID: 1077379455}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &423976669
+--- !u!114 &423976674
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -728,30 +728,41 @@ MonoBehaviour:
   m_GameObject: {fileID: 423976661}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 455f0f8732c68714aa260fed547dbbad, type: 3}
+  m_Script: {fileID: 11500000, guid: 134959a9a1447c64c9a6a7e6059f24fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  arrowPrefab: {fileID: 1154173508639064649, guid: 4e084de2112531b478d1d1c21c061bde, type: 3}
+  shotPoint: {fileID: 0}
+  launchForce: 1500
+  handStringAnchor: {fileID: 2006602149}
+  weaponSlot: {fileID: 988986912}
+  offHandSlot: {fileID: 78338695}
+  hotbar: {fileID: 444550409}
+  attackBowParam: Attack_Bow
+  holdBowParam: Hold_Bow
+  idleBowParam: IsBowIdle
+  idle1HParam: Is1HIdle
+  idle2HParam: Is2HIdle
+--- !u!114 &423976675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 423976661}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1f30c9f98abba04692e838f88debd72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 5
   runSpeed: 8
   rotationSpeed: 200
-  inputSmoothing: 20
+  inputSmoothing: 15
   gravity: -9.81
   moveXParam: MoveX
   moveYParam: MoveY
   isRunParam: IsRun
-  idle1HParam: Is1HIdle
-  idle2HParam: Is2HIdle
-  idleSpearParam: IsSpearIdle
-  attack1HParam: Attack1H
-  attack2HParam: Attack2H
-  attackMagicParam: AttackMagic
-  attackShieldParam: AttackShield
-  attackSpearParam: AttackSpear
-  attackAnimatorLayer: 1
-  weaponSlot: {fileID: 988986912}
-  offHandSlot: {fileID: 78338695}
-  hotbar: {fileID: 444550409}
-  weaponTrail: {fileID: 0}
 --- !u!1 &444550405
 GameObject:
   m_ObjectHideFlags: 0
@@ -855,11 +866,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2180fafee796df1469fa1136353cfa2a, type: 2}
   - {fileID: 11400000, guid: b45eb532b987174498f3aaf4ede9c918, type: 2}
   - {fileID: 11400000, guid: 279c17f19ac44d84d95dc7ea21f20c2f, type: 2}
-  - {fileID: 11400000, guid: f7bd63103782acf45a53d1f3a51674bd, type: 2}
   - {fileID: 11400000, guid: 23ce537ef9d213c47b51f874d1569e09, type: 2}
   - {fileID: 11400000, guid: b9c4891076e768446b5358eb4907ab72, type: 2}
   - {fileID: 11400000, guid: cb3f0719f60c5c34a9f5ade5b7467cb0, type: 2}
   - {fileID: 11400000, guid: 4cdc966fd65e624469dd9f723150d719, type: 2}
+  - {fileID: 11400000, guid: 5159a3eef9fa5e74585b82009c1ce6db, type: 2}
   slotIcons:
   - {fileID: 217722804}
   - {fileID: 312246758}
@@ -1573,10 +1584,16 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1041223432851015121, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
       insertIndex: 0
       addedObject: {fileID: 988986912}
+    - targetCorrespondingSourceObject: {fileID: 1041223432851015121, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 2006602149}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 683044934274976496, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 423976669}
+      addedObject: {fileID: 423976675}
+    - targetCorrespondingSourceObject: {fileID: 683044934274976496, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 423976674}
   m_SourcePrefab: {fileID: 100100000, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
 --- !u!1 &1344921363
 GameObject:
@@ -2024,6 +2041,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2005738162}
   m_CullTransparentMesh: 1
+--- !u!1 &2006602148
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2006602149}
+  m_Layer: 0
+  m_Name: HandStringAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2006602149
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2006602148}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 312806287}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2013398653
 GameObject:
   m_ObjectHideFlags: 0
