@@ -26,6 +26,14 @@ public class PlayerTest : MonoBehaviour
     [SerializeField] private string attackSpearParam  = "AttackSpear";
     [SerializeField] private int attackAnimatorLayer = 1;
 
+    [Header("Bow Animation Params")]
+    [SerializeField] private string attackBowParam = "Attack_Bow"; // Boolean
+    [SerializeField] private string holdBowParam = "Hold_Bow";     // Boolean
+    [SerializeField] private string idleBowParam = "IsBowIdle";    // Boolean
+
+    [Header("Bow String")]
+    [SerializeField] private Transform handStringAnchor; // ลากจุด HandStringPoint ในกระดูกมือมาใส่ที่นี่
+
     [Header("Weapon")]
     [SerializeField] private Transform weaponSlot;
     [SerializeField] private Transform offHandSlot;
@@ -33,6 +41,7 @@ public class PlayerTest : MonoBehaviour
 
     [Header("Trail")]
     [SerializeField] private DrakkarTrail weaponTrail;
+
 
     private CharacterController _cc;
     private Animator _anim;
@@ -53,7 +62,7 @@ public class PlayerTest : MonoBehaviour
         if (hotbar != null)
         {
             hotbar.OnSlotChanged += OnHotbarSlotChanged;
-            EquipWeapon(hotbar.SelectedWeapon);  // equip slot 0 on start
+            EquipWeapon(hotbar.SelectedWeapon);
         }
     }
 
@@ -124,8 +133,61 @@ public class PlayerTest : MonoBehaviour
 
     private void HandleAttackInput()
     {
-        if (Input.GetMouseButtonDown(0) && !_isAttacking)
-            StartCoroutine(AttackRoutine());
+        if (_equippedSO == null) return;
+
+        // แยก Logic ธนูออกจากอาวุธประชิด
+        if (_equippedSO.weaponType == WeaponType.Bow)
+        {
+            HandleBowInput();
+        }
+        else
+        {
+            if (Input.GetMouseButtonDown(0) && !_isAttacking)
+                StartCoroutine(AttackRoutine());
+        }
+    }
+
+    private void HandleBowInput()
+    {
+        // 1. กดค้าง (Hold)
+        if (Input.GetMouseButtonDown(0))
+        {
+            _anim.SetBool(attackBowParam, true);
+            _anim.SetBool(holdBowParam, true);
+        }
+
+        // 2. ปล่อย (Release)
+        if (Input.GetMouseButtonUp(0))
+        {
+            _anim.SetBool(holdBowParam, false);
+            // ปล่อยให้แอนิเมชันเล่นช่วง Release แล้วค่อยปิด Attack_Bow
+            StartCoroutine(FinishBowAttackRoutine());
+        }
+    }
+
+    private IEnumerator FinishBowAttackRoutine()
+    {
+        // รอให้ Animation Release เล่นจนจบ (ปรับเวลาได้ตามความเหมาะสม)
+        yield return new WaitForSeconds(0.2f); 
+        _anim.SetBool(attackBowParam, false);
+    }
+
+    private IEnumerator AttackRoutine()
+    {
+        _isAttacking = true;
+        _anim.SetTrigger(GetAttackParam());
+
+        yield return null;
+        yield return null;
+
+        AnimatorStateInfo state = _anim.GetCurrentAnimatorStateInfo(attackAnimatorLayer);
+        float clipLength = state.length > 0.1f ? state.length : 1f;
+
+        weaponTrail?.Begin();
+        yield return new WaitForSeconds(clipLength);
+        weaponTrail?.End();
+
+        _isAttacking = false;
     }
 
     private string GetAttackParam()
@@ -141,28 +203,6 @@ public class PlayerTest : MonoBehaviour
         };
     }
 
-    private IEnumerator AttackRoutine()
-    {
-        _isAttacking = true;
-        _anim.SetTrigger(GetAttackParam());
-
-        yield return null;
-        yield return null;
-
-        AnimatorStateInfo state = _anim.GetCurrentAnimatorStateInfo(attackAnimatorLayer);
-        float clipLength = state.length > 0.1f ? state.length : 1f;
-
-        // เริ่ม trail พร้อม animation
-        weaponTrail?.Begin();
-
-        yield return new WaitForSeconds(clipLength);
-
-        // หยุด trail พร้อม animation จบ
-        weaponTrail?.End();
-
-        _isAttacking = false;
-    }
-
     private void EquipWeapon(WeaponSO so)
     {
         if (_equippedWeapon != null)
@@ -173,18 +213,40 @@ public class PlayerTest : MonoBehaviour
 
         _equippedSO = so;
         WeaponType? type = so?.weaponType;
+
+        // Update Idle States
         _anim?.SetBool(idle1HParam,    type is WeaponType.OneHand or WeaponType.Staff or WeaponType.Shield);
         _anim?.SetBool(idle2HParam,    type == WeaponType.TwoHand);
         _anim?.SetBool(idleSpearParam, type == WeaponType.Spear);
+        _anim?.SetBool(idleBowParam,   type == WeaponType.Bow);
 
+        // Safety Reset
+        _anim?.SetBool(attackBowParam, false);
+        _anim?.SetBool(holdBowParam, false);
+        _isAttacking = false;
+        
         weaponTrail = null;
 
         if (so == null || so.prefab == null) return;
         Transform slot = (so.useOffHand && offHandSlot != null) ? offHandSlot : weaponSlot;
         if (slot == null) return;
         _equippedWeapon = Instantiate(so.prefab, slot);
+
+        ///// Check ว่าใช้ธนูไหม /////
+        if (so.weaponType == WeaponType.Bow)
+        {
+            var bowString = _equippedWeapon.GetComponent<BowStringController>();
+            if (bowString != null)
+            {
+                bowString.handStringPoint = handStringAnchor; 
+            }
+        }
+
         _equippedWeapon.transform.localPosition = so.gripPositionOffset;
         _equippedWeapon.transform.localEulerAngles = so.gripRotationOffset;
         weaponTrail = _equippedWeapon.GetComponentInChildren<DrakkarTrail>();
     }
+
+    ///////////////////// BOW /////////////////////
+
 }
