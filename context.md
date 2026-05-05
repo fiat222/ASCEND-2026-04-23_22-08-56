@@ -48,10 +48,28 @@
 - `PlayerTest.cs` — added `idleSpearParam`/`attackShieldParam`/`attackSpearParam`; `EquipWeapon` sets idle bools per WeaponType (Shield→1H idle, Spear→spear idle); `GetAttackParam` handles Shield/Spear triggers
 - `PlayerTest.cs` — added `offHandSlot` (Transform) for left-hand weapons (e.g. Shield); `EquipWeapon` routes to `offHandSlot` if `so.useOffHand`; applies `gripPositionOffset`/`gripRotationOffset` via `localPosition`/`localEulerAngles` (not SetLocalPositionAndRotation — rotation bug workaround)
 
+### 2026-05-03
+- `PlayerCombat.cs` — fixed `HandleStaffInput()`: staff skill (right-click) was missing `SetInAction(false)` + `RestoreIdle()` after animation finished, causing player to be stuck in action state. Replaced inline trigger with `StaffSkillRoutine()` coroutine that waits for clip length then unlocks, matching the pattern used by `AttackRoutine` and other weapon handlers.
+- `PlayerCombat.cs` — fixed 1s delay in `AttackRoutine` and `SpearThrowRoutine` using `WaitUntil` + `GetNextAnimatorStateInfo`.
+- [x] WeaponSO.cs & PlayerCombat.cs — added `holdPositionOffset` and `holdRotationOffset`. Implemented `UpdateWeaponGrip(bool)` to switch weapon transform offsets when entering/exiting hold states.
+- [x] PlayerMovement.cs — Refactored movement to follow camera direction (LookRotation); added Cursor locking; switched to `Input.GetAxis` with damp time for smoother Blend Tree transitions.
+- [x] PlayerMovement.cs — Character now always faces crosshair (camera forward) every frame regardless of movement input. `rotationSpeed` bumped to 20 for snappier TPS feel. `sqrMagnitude` threshold tightened to 0.001f.
+- [x] Reverted cursor lock back to `PlayerMovement.cs` because the project uses Cinemachine. User will set up a Cinemachine FreeLook or Virtual Camera to handle the mouse input and camera orbiting.
+
+### 2026-05-04 (Late Night)
+- Fixed compilation error in `PlayerMovement.cs` by replacing `CinemachineInputAxisState` with the correct `AxisState`.
+- Implemented `AxisState` for both X and Y mouse axes.
+- Refactored rotation logic: `xAxis` now rotates the entire Player root (Yaw), and `yAxis` rotates only the `cameraTarget` (Pitch).
+- Verified Cinemachine Virtual Camera setup: `Binding Mode = Lock to Target`, `Aim = Same as Follow Target`.
+
+### 2026-05-04 (Session)
+- `PlayerMovement.cs` — full rewrite for smoother 3PS feel: accel/decel via `MoveTowards`, smooth move dir `Vector3.Lerp`, smooth body rotation while moving, smoothed animator Speed param
+- `PlayerMovement.cs` — user reverted to stable version (simplified): single `spineBone`, `paramMoveX/Y/IsRun/Jump/IsGround` as serialized strings, `AxisState` xAxis/yAxis
+- `PlayerMovement.cs` — jump fixed: grounded check first → `SetBool(paramIsGround)` → if grounded + Space → `SetTrigger(paramJump)` + set `_verticalVel`
+- `PlayerMovement.cs` — dash added (velocity burst): `V` key triggers dash in current move dir (fallback: forward), `dashSpeed=15f`, `dashDuration=0.2f`, `dashCooldown=1f`; dash overrides movement via early `return`
+- `PlayerMovement.cs` — run changed from hold-Shift to toggle-Shift (`_isRunning` bool field)
+
 ## TODOs / Next Steps
-- [x] WASD movement + left click attack (networked)
-- [x] Animator: Base Layer blend tree (MoveX/MoveY) + Upper layer (Attack, weight=1, upper body mask)
-- [x] Walk/Run toggle (Shift) via IsRun param
 - [ ] Build NetworkLobby UI (Canvas + TMP)
 - [ ] Test multiplayer (host + join)
 - [ ] Define game concept / mechanics
