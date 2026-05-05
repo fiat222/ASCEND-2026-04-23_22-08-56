@@ -766,6 +766,10 @@ MonoBehaviour:
   weaponSlot: {fileID: 988986912}
   offHandSlot: {fileID: 78338695}
   hotbar: {fileID: 444550409}
+  magicBallPrefab: {fileID: 2012330558225203095, guid: 4adb78a6ce40ae14a884dec01491bbf7, type: 3}
+  magicPoint: {fileID: 0}
+  magicBallSpeed: 15
+  magicBallDistance: 50
   arrowPrefab: {fileID: 1154173508639064649, guid: 4e084de2112531b478d1d1c21c061bde, type: 3}
   shotPoint: {fileID: 0}
   arrowForce: 20
@@ -787,6 +791,7 @@ MonoBehaviour:
   idle2HParam: Is2HIdle
   idleSpearParam: IsSpearIdle
   idleBowParam: IsBowIdle
+  idleShieldParam: IsShieldIdle
   skillStaffParam: Skill_Staff
   skillWandParam: Skill_Wand
   isWandHoldParam: IsWandHold
@@ -1249,6 +1254,7 @@ GameObject:
   m_Component:
   - component: {fileID: 705507995}
   - component: {fileID: 705507994}
+  - component: {fileID: 705507996}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1333,6 +1339,29 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &705507996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 705507993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_RenderingLayers: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_ShadowRenderingLayers: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
 --- !u!1 &763874127
 GameObject:
   m_ObjectHideFlags: 0

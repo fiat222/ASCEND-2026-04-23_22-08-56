@@ -69,7 +69,14 @@
 - `PlayerMovement.cs` — dash added (velocity burst): `V` key triggers dash in current move dir (fallback: forward), `dashSpeed=15f`, `dashDuration=0.2f`, `dashCooldown=1f`; dash overrides movement via early `return`
 - `PlayerMovement.cs` — run changed from hold-Shift to toggle-Shift (`_isRunning` bool field)
 
+### 2026-05-05
+- Explored Free Slash VFX asset — Projectile prefabs in `Prefabs/Projectiles/`, `Projectile.cs` handles forward movement + distance stop + spawn on finish. Razengan textures already in asset.
+- `PlayerCombat.cs` — added `ExecuteMagicBall()` (animation event method): instantiates magic ball prefab facing crosshair, sets speed/distance, calls `Projectile.Fire()`. Fields: `magicBallPrefab`, `magicPoint`, `magicBallSpeed`, `magicBallDistance`.
+- `PlayerCombat.cs` — added `IsShieldIdle` parameter (`idleShieldParam`). Shield removed from `idle1HParam` group. All idle clear/restore/equip updated.
+- `PlayerCombat.cs` — Staff + Wand auto-assign `magicPoint` from child named `MagicPoint` on equip (same pattern as Bow → ShotPoint).
+
 ## TODOs / Next Steps
+- [ ] Magic projectile: destroy on hit + play Impact prefab (`SpawnWhenFinish` on `Projectile` component, or `OnCollisionEnter` script)
 - [ ] Build NetworkLobby UI (Canvas + TMP)
 - [ ] Test multiplayer (host + join)
 - [ ] Define game concept / mechanics
