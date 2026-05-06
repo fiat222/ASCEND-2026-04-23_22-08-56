@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Drakkar.GameUtils;
+using MaykerStudio.Demo;
 
 public class PlayerCombat : MonoBehaviour
 {
@@ -8,6 +9,12 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private Transform weaponSlot;
     [SerializeField] private Transform offHandSlot;
     [SerializeField] private HotbarController hotbar;
+
+    [Header("Magic Ball")]
+    public GameObject magicBallPrefab;
+    public Transform magicPoint;
+    public float magicBallSpeed    = 15f;
+    public float magicBallDistance = 50f;
 
     [Header("Bow & Spear Settings")]
     public GameObject arrowPrefab;
@@ -35,6 +42,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private string idle2HParam      = "Is2HIdle";
     [SerializeField] private string idleSpearParam   = "IsSpearIdle";
     [SerializeField] private string idleBowParam     = "IsBowIdle";
+    [SerializeField] private string idleShieldParam  = "IsShieldIdle";
 
     [Header("Magic Animation Params")]
     [SerializeField] private string skillStaffParam = "Skill_Staff";
@@ -105,6 +113,7 @@ public class PlayerCombat : MonoBehaviour
         _anim.SetBool(idle2HParam, false);
         _anim.SetBool(idleSpearParam, false);
         _anim.SetBool(idleBowParam, false);
+        _anim.SetBool(idleShieldParam, false);
     }
 
     private void RestoreIdle()
@@ -116,15 +125,17 @@ public class PlayerCombat : MonoBehaviour
         _anim.SetBool(idle2HParam, false);
         _anim.SetBool(idleSpearParam, false);
         _anim.SetBool(idleBowParam, false);
+        _anim.SetBool(idleShieldParam, false);
 
         // ถ้าไม่มีอาวุธ → ปล่อยทุก idle = false (ไป Idle_NoWeapon)
         if (_equippedSO == null) return;
 
         // เปิด idle ตามอาวุธ
-        _anim.SetBool(idle1HParam, _equippedSO.weaponType is WeaponType.OneHand or WeaponType.Staff or WeaponType.Shield or WeaponType.Wand);
+        _anim.SetBool(idle1HParam, _equippedSO.weaponType is WeaponType.OneHand or WeaponType.Staff or WeaponType.Wand);
         _anim.SetBool(idle2HParam, _equippedSO.weaponType == WeaponType.TwoHand);
         _anim.SetBool(idleSpearParam, _equippedSO.weaponType == WeaponType.Spear);
         _anim.SetBool(idleBowParam, _equippedSO.weaponType == WeaponType.Bow);
+        _anim.SetBool(idleShieldParam, _equippedSO.weaponType == WeaponType.Shield);
         }
 
     private IEnumerator AttackRoutine()
@@ -364,6 +375,23 @@ public class PlayerCombat : MonoBehaviour
             proj.Launch(dir, arrowForce);
     }
 
+    public void ExecuteMagicBall()
+    {
+        if (magicBallPrefab == null || magicPoint == null) return;
+
+        Vector3 target = GetCrosshairTarget();
+        Vector3 dir    = (target - magicPoint.position).normalized;
+
+        GameObject ball = Instantiate(magicBallPrefab, magicPoint.position, Quaternion.LookRotation(dir));
+
+        if (ball.TryGetComponent<Projectile>(out var proj))
+        {
+            proj.speed    = magicBallSpeed;
+            proj.distance = magicBallDistance;
+            proj.Fire();
+        }
+    }
+
     public void ExecuteSpearThrow()
     {
         if (_equippedSO == null || throwPoint == null) return;
@@ -406,10 +434,11 @@ public class PlayerCombat : MonoBehaviour
 
         if (so != null)
         {
-            _anim.SetBool(idle1HParam, so.weaponType is WeaponType.OneHand or WeaponType.Staff or WeaponType.Shield or WeaponType.Wand);
+            _anim.SetBool(idle1HParam, so.weaponType is WeaponType.OneHand or WeaponType.Staff or WeaponType.Wand);
             _anim.SetBool(idle2HParam, so.weaponType == WeaponType.TwoHand);
             _anim.SetBool(idleSpearParam, so.weaponType == WeaponType.Spear);
             _anim.SetBool(idleBowParam, so.weaponType == WeaponType.Bow);
+            _anim.SetBool(idleShieldParam, so.weaponType == WeaponType.Shield);
         }
 
         if (so == null || so.prefab == null) return;
@@ -434,6 +463,13 @@ public class PlayerCombat : MonoBehaviour
             Transform foundPoint = _equippedWeapon.transform.Find("ShotPoint");
             if (foundPoint != null)
                 shotPoint = foundPoint;
+        }
+
+        if (so.weaponType is WeaponType.Staff or WeaponType.Wand)
+        {
+            Transform foundPoint = _equippedWeapon.transform.Find("MagicPoint");
+            if (foundPoint != null)
+                magicPoint = foundPoint;
         }
     }
 
