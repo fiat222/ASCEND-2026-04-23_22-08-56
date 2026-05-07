@@ -458,7 +458,10 @@ public class PlayerCombat : MonoBehaviour
         {
             var bowString = _equippedWeapon.GetComponent<BowStringController>();
             if (bowString != null)
+            {
                 bowString.handStringPoint = handStringAnchor;
+                bowString.playerAnim = _anim;
+            }
 
             Transform foundPoint = _equippedWeapon.transform.Find("ShotPoint");
             if (foundPoint != null)
