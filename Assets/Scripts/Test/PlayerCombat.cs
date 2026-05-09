@@ -16,6 +16,12 @@ public class PlayerCombat : MonoBehaviour
     public float magicBallSpeed    = 15f;
     public float magicBallDistance = 50f;
 
+    [Header("Staff Spell")]
+    private StaffSpell staffSpell;
+
+    [Header("Wand Laser")]
+    private WandLaser wandLaser;
+
     [Header("Bow & Spear Settings")]
     public GameObject arrowPrefab;
     public Transform shotPoint;
@@ -61,6 +67,7 @@ public class PlayerCombat : MonoBehaviour
     private GameObject _equippedWeapon;
     private WeaponSO _equippedSO;
     private bool _isAttacking;
+    private bool _isStaffCharging;
     private DrakkarTrail _weaponTrail;
 
     private void Start()
@@ -76,7 +83,16 @@ public class PlayerCombat : MonoBehaviour
 
     private void Update()
     {
-        if (_equippedSO == null || _isAttacking) return;
+        if (_equippedSO == null) return;
+
+        if (_isStaffCharging && Input.GetMouseButtonUp(1))
+        {
+            _isStaffCharging = false;
+            StartCoroutine(StaffSkillRoutine());
+            return;
+        }
+
+        if (_isAttacking) return;
 
         switch (_equippedSO.weaponType)
         {
@@ -187,17 +203,20 @@ public class PlayerCombat : MonoBehaviour
     private void HandleStaffInput()
     {
         if (Input.GetMouseButtonDown(1))
-            StartCoroutine(StaffSkillRoutine());
+        {
+            _isStaffCharging = true;
+            SetInAction(true);
+            ClearAllIdle();
+            staffSpell?.BeginCast();
+        }
 
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !_isStaffCharging)
             StartCoroutine(AttackRoutine());
     }
 
     private IEnumerator StaffSkillRoutine()
     {
         _isAttacking = true;
-        SetInAction(true);
-        ClearAllIdle();
 
         _anim.SetTrigger(skillStaffParam);
 
@@ -225,12 +244,14 @@ public class PlayerCombat : MonoBehaviour
 
             _anim.SetTrigger(skillWandParam);
             _anim.SetBool(isWandHoldParam, true);
+            wandLaser?.StartFire();
         }
 
         if (Input.GetMouseButtonUp(1))
         {
             _anim.SetBool(isWandHoldParam, false);
             UpdateWeaponGrip(false);
+            wandLaser?.StopFire();
 
             SetInAction(false);
             RestoreIdle();
@@ -392,6 +413,11 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    public void OnStaffImpact()
+    {
+        staffSpell?.Cast();
+    }
+
     public void ExecuteSpearThrow()
     {
         if (_equippedSO == null || throwPoint == null) return;
@@ -474,6 +500,14 @@ public class PlayerCombat : MonoBehaviour
             if (foundPoint != null)
                 magicPoint = foundPoint;
         }
+
+        staffSpell = so.weaponType == WeaponType.Staff
+            ? _equippedWeapon.GetComponentInChildren<StaffSpell>()
+            : null;
+
+        wandLaser = so.weaponType == WeaponType.Wand
+            ? _equippedWeapon.GetComponentInChildren<WandLaser>()
+            : null;
     }
 
     //------------------ Interupt ------------------
@@ -482,6 +516,9 @@ public class PlayerCombat : MonoBehaviour
         StopAllCoroutines();
         _isAttacking = false;
         _isHoldingSpear = false;
+        _isStaffCharging = false;
+        staffSpell?.CancelCast();
+        wandLaser?.StopFire();
 
         _anim.SetBool(isWandHoldParam, false);
         _anim.SetBool(holdBowParam, false);

@@ -131,5 +131,5 @@ Material:
     - _OverlayColor: {r: 1, g: 1, b: 1, a: 1}
     - _OverlayFlowSpeed: {r: 0, g: 0, b: 0, a: 0}
     - _SpeedMainTexUVNoiseZW: {r: 0, g: 0, b: 0, a: 0}
-    - _TintColor: {r: 0.1607843, g: 0.42589903, b: 0.78039217, a: 0.597}
+    - _TintColor: {r: 0, g: 0.43037963, b: 1, a: 0.597}
   m_BuildTextureStacks: []
