@@ -75,6 +75,40 @@
 - `PlayerCombat.cs` — added `IsShieldIdle` parameter (`idleShieldParam`). Shield removed from `idle1HParam` group. All idle clear/restore/equip updated.
 - `PlayerCombat.cs` — Staff + Wand auto-assign `magicPoint` from child named `MagicPoint` on equip (same pattern as Bow → ShotPoint).
 
+## Animator Transition Rules
+
+### Pattern (ALL states follow this)
+**Base Layer (idle/block states):**
+- Any State → `<State>`: condition `Is<X>Idle = false` + state-specific bool/trigger
+- `IsInAction` is SET in code as a flag only — NOT used as animator transition condition
+- Exit: `RestoreIdle()` sets correct idle bool true → animator flows back naturally (no hardcoded "→ Idle" transition needed)
+- No Exit Time on entry. Transition duration ~0.1–0.15s.
+
+**Attack Layer (layer 1):**
+- `Empty` → `<AttackState>`: trigger condition only
+- `<AttackState>` → `Empty`: Exit Time = 1.0, no other condition
+
+### Block params + their idle guard
+| Param | Idle guard | WeaponType |
+|---|---|---|
+| `Is1HBlock` | `Is1HIdle = false` | OneHand (no off-hand) |
+| `Is2HBlock` | `Is2HIdle = false` | TwoHand |
+| `IsShieldBlock` | `IsShieldIdle = false` | Shield (main hand) |
+| `IsShieldSwordBlock` | `Is1HIdle = false` | OneHand + Shield off-hand |
+
+### Attack layer triggers
+| Trigger | State name |
+|---|---|
+| `Attack1H` | `Attack_1H` |
+| `Attack2H` | `Attack_2H` |
+| `AttackMagic` | `Attack_Magic` |
+| `AttackShield` | `Attack_Shield` |
+| `AttackSpear` | `Attack_Spear` |
+| `Attack_Bow` | `Attack_Bow` |
+| `ShieldSwordParry` | `ShieldSword_Parry` |
+| `Skill_Staff` | `Staff_Skill` |
+| `Skill_Wand` | `Wand_Skill` |
+
 ## TODOs / Next Steps
 - [ ] Magic projectile: destroy on hit + play Impact prefab (`SpawnWhenFinish` on `Projectile` component, or `OnCollisionEnter` script)
 - [ ] Build NetworkLobby UI (Canvas + TMP)
@@ -83,3 +117,42 @@
 - [ ] Design level layout (SimpleNaturePack assets)
 - [ ] Combat system (hitbox, damage)
 - [ ] Steam transport integration
+- [ ] Create NetworkPlayer prefab — add NetworkPlayerMovement + NetworkPlayerCombat, configure fields
+- [ ] Add .meta files for new folders so Unity tracks them (auto on reimport)
+
+### 2026-05-10
+- Scripts refactored to professional folder structure (no more flat Test/)
+  - `Core/Interfaces/` — IDamageable.cs
+  - `Data/` — WeaponSO.cs (unchanged)
+  - `Dev/Player/` — PlayerMovement.cs, PlayerCombat.cs (local/no-network dev)
+  - `Dev/Weapons/` — BowStringController.cs, ProjectilePrefab.cs
+  - `Dev/Weapons/Magic/` — StaffSpell.cs, StaffPillar.cs, WandLaser.cs
+  - `Network/Lobby/` — NetworkLobby.cs, PlayerSpawner.cs
+  - `Network/Player/` — CharactorMovement.cs (old prototype), NetworkPlayerMovement.cs (NEW), NetworkPlayerCombat.cs (NEW)
+  - `UI/Hotbar/` — HotbarController.cs (unchanged)
+- Deleted: `Test/CameraController.cs` (empty), `Test/PlayerTest(Old).cs` (superseded)
+- GUIDs preserved — .cs + .meta moved together
+- `GameOverview.md` created at root, gitignored — full game concept doc
+- `NetworkPlayerMovement.cs` — full port of PlayerMovement to PurrNet NetworkBehaviour
+  - isOwner guard, OnSpawned, SyncMoveAnimServerRpc (blend tree x/y/run), SyncJumpServerRpc
+- `NetworkPlayerCombat.cs` — full port of PlayerCombat to PurrNet NetworkBehaviour
+  - isOwner guard, OnSpawned, RequestAttackServerRpc → PlayAttackObserversRpc
+  - All weapon types supported; weapon equip local-only (visual) for now
+
+## Script → Prefab Map
+| Script | Prefab |
+|--------|--------|
+| PlayerMovement.cs | Player root |
+| PlayerCombat.cs | Player root |
+| HotbarController.cs | HUD Canvas |
+| BowStringController.cs | Bow weapon prefab |
+| ProjectilePrefab.cs | Arrow prefab; SpearThrow prefab |
+| StaffSpell.cs | Staff weapon prefab |
+| StaffPillar.cs | StaffImpact VFX prefab |
+| WandLaser.cs | Wand weapon prefab |
+| IDamageable.cs | Interface — impl on Enemy/destructible prefabs |
+| WeaponSO.cs | ScriptableObject (Assets/Data/, not a prefab) |
+| NetworkPlayerMovement.cs | NetworkPlayer prefab (PurrNet-spawned) |
+| NetworkPlayerCombat.cs | NetworkPlayer prefab (PurrNet-spawned) |
+| NetworkLobby.cs | NetworkManager scene GameObject |
+| PlayerSpawner.cs | NetworkManager scene GameObject |
