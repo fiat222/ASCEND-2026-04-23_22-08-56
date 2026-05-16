@@ -25,6 +25,9 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private string attackSlash01Param = "Attack_Slash01";
     [SerializeField] private string attackSlash02Param = "Attack_Slash02";
     [SerializeField] private string hitReactParam      = "GetDamaged";
+    [SerializeField] private string deathParam   = "Die";
+    [SerializeField] private float  sinkDuration = 1.5f;
+    [SerializeField] private float  sinkDepth    = 2f;
 
     private Animator     _anim;
     private EnemyStats   _stats;
@@ -168,8 +171,27 @@ public class EnemyAI : MonoBehaviour
 
     private void OnDied()
     {
+        _state = State.Dead;
         StopAllCoroutines();
         _hitbox?.DisableHitbox();
+        _anim.SetTrigger(deathParam);
+    }
+
+    public void OnDeathAnimEnd()
+    {
+        StartCoroutine(SinkAndDestroy());
+    }
+
+    private IEnumerator SinkAndDestroy()
+    {
+        float elapsed = 0f;
+        float speed   = sinkDepth / sinkDuration;
+        while (elapsed < sinkDuration)
+        {
+            transform.position -= Vector3.up * speed * Time.deltaTime;
+            elapsed            += Time.deltaTime;
+            yield return null;
+        }
         Destroy(gameObject);
     }
 
