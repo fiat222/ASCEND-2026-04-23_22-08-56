@@ -54,42 +54,31 @@ public class GhostAfterimage : MonoBehaviour
 
             ghost.AddComponent<MeshFilter>().mesh = bakedMesh;
 
-            MeshRenderer mr = ghost.AddComponent<MeshRenderer>();
-            mr.material = ghostMaterial != null
-                ? new Material(ghostMaterial)
-                : new Material(Shader.Find("Standard"));
-            mr.material.color = ghostColor;
-            SetMaterialTransparent(mr.material);
+            Material mat = new Material(ghostMaterial);
+            mat.SetColor("_BaseColor", ghostColor);
 
-            StartCoroutine(FadeAndDestroy(ghost, mr.material));
+            MeshRenderer mr = ghost.AddComponent<MeshRenderer>();
+            mr.material = mat;
+
+            StartCoroutine(FadeAndDestroy(ghost, mat, bakedMesh));
         }
     }
 
-    private IEnumerator FadeAndDestroy(GameObject ghost, Material mat)
+    private IEnumerator FadeAndDestroy(GameObject ghost, Material mat, Mesh mesh)
     {
         float elapsed    = 0f;
-        Color startColor = mat.color;
+        Color startColor = ghostColor;
 
         while (elapsed < ghostLifetime)
         {
             elapsed += Time.deltaTime;
             float alpha = Mathf.Lerp(startColor.a, 0f, elapsed / ghostLifetime);
-            mat.color = new Color(startColor.r, startColor.g, startColor.b, alpha);
+            mat.SetColor("_BaseColor", new Color(startColor.r, startColor.g, startColor.b, alpha));
             yield return null;
         }
 
         Destroy(ghost);
-    }
-
-    private void SetMaterialTransparent(Material mat)
-    {
-        mat.SetFloat("_Mode", 2);
-        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        mat.SetInt("_ZWrite", 0);
-        mat.DisableKeyword("_ALPHATEST_ON");
-        mat.EnableKeyword("_ALPHABLEND_ON");
-        mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        mat.renderQueue = 3000;
+        Destroy(mat);
+        Destroy(mesh);
     }
 }
