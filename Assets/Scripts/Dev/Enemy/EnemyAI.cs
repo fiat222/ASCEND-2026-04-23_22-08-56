@@ -35,6 +35,7 @@ public class EnemyAI : MonoBehaviour
     private Transform    _target;
     private bool         _isAttacking;
     private float        _attackTimer;
+    private bool         _sinking;
 
     private enum State { Idle, Chase, Attack, Dead }
     private State _state = State.Idle;
@@ -179,6 +180,8 @@ public class EnemyAI : MonoBehaviour
 
     public void OnDeathAnimEnd()
     {
+        if (_sinking) return;
+        _sinking = true;
         StartCoroutine(SinkAndDestroy());
     }
 
