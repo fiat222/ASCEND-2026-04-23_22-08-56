@@ -49,6 +49,15 @@ public class EnemyAI : MonoBehaviour
         FindNearestPlayer();
     }
 
+    private void OnDestroy()
+    {
+        if (_stats == null) return;
+        _stats.OnDied        -= OnDied;
+        _stats.OnHit         -= OnHitHandler;
+        _stats.OnInterrupted -= OnInterruptedHandler;
+        _stats.OnStunned     -= OnStunnedHandler;
+    }
+
     private void Update()
     {
         if (_state == State.Dead) return;
@@ -185,9 +194,10 @@ public class EnemyAI : MonoBehaviour
     {
         if (!_stats.IsAlive) return;
         if (_state == State.Attack) return;
+        _anim.ResetTrigger(hitReactParam);
         _anim.SetTrigger(hitReactParam);
     }
 
-    private void OnInterruptedHandler() => _anim.SetTrigger(hitReactParam);
-    private void OnStunnedHandler()     => _anim.SetTrigger(hitReactParam);
+    private void OnInterruptedHandler() { if (_stats.IsAlive) { _anim.ResetTrigger(hitReactParam); _anim.SetTrigger(hitReactParam); } }
+    private void OnStunnedHandler()     { if (_stats.IsAlive) { _anim.ResetTrigger(hitReactParam); _anim.SetTrigger(hitReactParam); } }
 }
