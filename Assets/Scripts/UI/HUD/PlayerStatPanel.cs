@@ -28,6 +28,8 @@ public class PlayerStatPanel : MonoBehaviour
 
     private void Update()
     {
+        // TODO: change to KeyCode.Tab for production build
+        // Using I because Unity Editor intercepts Tab for UI navigation (EventSystem)
         if (Input.GetKeyDown(KeyCode.I))
             TogglePanel();
     }
