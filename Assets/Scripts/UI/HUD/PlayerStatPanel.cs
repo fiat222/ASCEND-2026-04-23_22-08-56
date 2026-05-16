@@ -28,9 +28,7 @@ public class PlayerStatPanel : MonoBehaviour
 
     private void Update()
     {
-        // TODO: change to KeyCode.Tab for production build
-        // Using I because Unity Editor intercepts Tab for UI navigation (EventSystem)
-        if (Input.GetKeyDown(KeyCode.I))
+        if (Input.GetKeyDown(KeyCode.Tab))
             TogglePanel();
     }
 
@@ -43,20 +41,20 @@ public class PlayerStatPanel : MonoBehaviour
 
     private void Refresh()
     {
-        vitText.text = playerStats.VIT.ToString();
-        endText.text = playerStats.END.ToString();
-        agiText.text = playerStats.AGI.ToString();
-        strText.text = playerStats.STR.ToString();
-        dexText.text = playerStats.DEX.ToString();
-        arcText.text = playerStats.ARC.ToString();
+        vitText.text = $"VIT  {playerStats.VIT}";
+        endText.text = $"END  {playerStats.END}";
+        agiText.text = $"AGI  {playerStats.AGI}";
+        strText.text = $"STR  {playerStats.STR}";
+        dexText.text = $"DEX  {playerStats.DEX}";
+        arcText.text = $"ARC  {playerStats.ARC}";
 
-        hpText.text        = Mathf.RoundToInt(playerStats.MaxHP).ToString();
-        staminaText.text   = Mathf.RoundToInt(playerStats.MaxStamina).ToString();
-        stamRecText.text   = playerStats.StaminaRecovery.ToString("F1");
-        equipLoadText.text = Mathf.RoundToInt(playerStats.EquipLoad).ToString();
-        critRateText.text  = playerStats.CritRate.ToString("F1") + "%";
-        critDmgText.text   = playerStats.CritDamage.ToString("F2") + "x";
-        manaText.text      = Mathf.RoundToInt(playerStats.MaxMana).ToString();
-        moveSpeedText.text = playerStats.MovementSpeed.ToString("F1");
+        hpText.text        = $"HP          {Mathf.RoundToInt(playerStats.MaxHP)}";
+        staminaText.text   = $"Stamina     {Mathf.RoundToInt(playerStats.MaxStamina)}";
+        stamRecText.text   = $"Stam.Rec    {playerStats.StaminaRecovery:F1}/s";
+        equipLoadText.text = $"Equip Load  {Mathf.RoundToInt(playerStats.EquipLoad)}";
+        critRateText.text  = $"Crit Rate   {playerStats.CritRate:F1}%";
+        critDmgText.text   = $"Crit Dmg    {playerStats.CritDamage:F2}x";
+        manaText.text      = $"Mana        {Mathf.RoundToInt(playerStats.MaxMana)}";
+        moveSpeedText.text = $"Move Speed  {playerStats.MovementSpeed:F1}";
     }
 }
