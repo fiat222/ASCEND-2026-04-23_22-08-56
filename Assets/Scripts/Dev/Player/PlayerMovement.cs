@@ -39,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
     private Animator            _anim;
     private float               _verticalVel;
     private bool                _isDashing;
+    public  bool                IsDashing => _isDashing;
     private float               _dashTimer;
     private float               _dashCooldownTimer;
     private Vector3             _dashDir;

@@ -96,8 +96,15 @@ public class EnemyAI : MonoBehaviour
                 break;
 
             case State.Chase:
-                if (dist > chaseRange)                             { _state = State.Idle;   break; }
-                if (dist <= attackRange && _attackTimer <= 0f)     { _state = State.Attack; break; }
+                if (dist > chaseRange) { _state = State.Idle; break; }
+
+                if (dist <= attackRange)
+                {
+                    SetMovement(0f, 0f);
+                    RotateToward(_target.position);
+                    if (_attackTimer <= 0f) _state = State.Attack;
+                    break;
+                }
 
                 RotateToward(_target.position);
                 float speed = dist > attackRange * 2f ? runSpeed : walkSpeed;

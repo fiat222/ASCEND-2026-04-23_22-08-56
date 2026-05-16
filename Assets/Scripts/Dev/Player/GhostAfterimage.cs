@@ -9,23 +9,19 @@ public class GhostAfterimage : MonoBehaviour
     [SerializeField] private Color ghostColor         = new Color(0.4f, 0.8f, 1f, 0.6f);
     [SerializeField] private Material ghostMaterial;
 
-    [Header("Dash Detection")]
-    [SerializeField] private float dashSpeedThreshold = 12f; // just below dashSpeed (15)
-
-    private CharacterController    _cc;
+    private PlayerMovement         _movement;
     private SkinnedMeshRenderer[]  _skinnedRenderers;
     private float                  _spawnTimer;
 
     private void Awake()
     {
-        _cc               = GetComponent<CharacterController>();
+        _movement         = GetComponent<PlayerMovement>();
         _skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
     }
 
     private void Update()
     {
-        Vector3 horizontal = new Vector3(_cc.velocity.x, 0f, _cc.velocity.z);
-        if (horizontal.magnitude >= dashSpeedThreshold)
+        if (_movement.IsDashing)
         {
             _spawnTimer -= Time.deltaTime;
             if (_spawnTimer <= 0f)
