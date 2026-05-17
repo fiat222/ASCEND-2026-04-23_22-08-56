@@ -19,6 +19,6 @@ MonoBehaviour:
   linkedNetworkPrefabs: []
   prefabs:
   - guid: 
-    prefab: {fileID: 683044934274976496, guid: 322aaa9e1d4eb0c4c896a80f6fdafd4c, type: 3}
+    prefab: {fileID: 683044934274976496, guid: b29e8acaf2776ef4ab024ff6942aea21, type: 3}
     pooled: 0
     warmupCount: 5

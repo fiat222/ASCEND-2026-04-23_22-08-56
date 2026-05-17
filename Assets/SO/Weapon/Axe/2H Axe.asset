@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 396579d84280fd84cbe6e040026a57bf, type: 3}
+  m_Name: 2H Axe
+  m_EditorClassIdentifier: 
+  weaponName: 2H Axe
+  weaponType: 1
+  damage: 20
+  prefab: {fileID: 8667483062650553708, guid: 4bdbd42ed0e23f6488c746d3a1501f00, type: 3}
+  icon: {fileID: 21300000, guid: ee896e73c1e05974d8d91a98e05661f3, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripRotationOffset: {x: 0, y: 0, z: 0}
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
+  useOffHand: 0
+  offHandPositionOffset: {x: 0, y: 0, z: 0}
+  offHandRotationOffset: {x: 0, y: 0, z: 0}
+  baseGuardStability: 0
+  staminaCost: 10
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 15
+  projectileRange: 50
+  projectileForce: 1500
+  manaCost: 20
+  strScaling: 0
+  dexScaling: 0
+  arcScaling: 0

@@ -10,18 +10,23 @@ public class GhostAfterimage : MonoBehaviour
     [SerializeField] private Material ghostMaterial;
 
     private PlayerMovement         _movement;
+    private NetworkPlayerMovement  _networkMovement;
     private SkinnedMeshRenderer[]  _skinnedRenderers;
     private float                  _spawnTimer;
 
+    private bool IsDashing => _movement != null ? _movement.IsDashing
+                            : (_networkMovement != null && _networkMovement.IsDashing);
+
     private void Awake()
     {
-        _movement         = GetComponent<PlayerMovement>();
+        _movement        = GetComponent<PlayerMovement>();
+        _networkMovement = GetComponent<NetworkPlayerMovement>();
         _skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
     }
 
     private void Update()
     {
-        if (_movement.IsDashing)
+        if (IsDashing)
         {
             _spawnTimer -= Time.deltaTime;
             if (_spawnTimer <= 0f)

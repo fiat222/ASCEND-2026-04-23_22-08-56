@@ -115,7 +115,7 @@
 - [ ] Test multiplayer (host + join)
 - [ ] Define game concept / mechanics
 - [ ] Design level layout (SimpleNaturePack assets)
-- [ ] Combat system (hitbox, damage)
+- [x] Combat system Phase 1 — stat system, hitbox, damage formula (2026-05-16)
 - [ ] Steam transport integration
 - [ ] Create NetworkPlayer prefab — add NetworkPlayerMovement + NetworkPlayerCombat, configure fields
 - [ ] Add .meta files for new folders so Unity tracks them (auto on reimport)
@@ -156,3 +156,85 @@
 | NetworkPlayerCombat.cs | NetworkPlayer prefab (PurrNet-spawned) |
 | NetworkLobby.cs | NetworkManager scene GameObject |
 | PlayerSpawner.cs | NetworkManager scene GameObject |
+| StatConfig.cs | ScriptableObject-free static helper (Data/) |
+| PlayerStats.cs | Player root (alongside PlayerCombat) |
+| EnemyStats.cs | Skeleton prefab root |
+| EnemyAI.cs | Skeleton prefab root |
+| WeaponHitbox.cs | Child of weapon prefab (needs Collider) |
+
+### 2026-05-16
+- STAT_SPEC.md implemented — Phase 1 (local dev combat)
+  - `Data/StatConfig.cs` — StatConfig class + StatCurveCalculator static helper
+  - `Data/WeaponSO.cs` — added ScalingGrade enum + strScaling/dexScaling/arcScaling fields + StrScale/DexScale/ArcScale properties
+  - `Dev/Player/PlayerStats.cs` — VIT/STR/DEX/ARC/AGI/END 1-99, MaxHP/MaxStamina/MaxMana derived stats, RawDamage(WeaponSO), TakeDamage, OnDied event
+  - `Dev/Enemy/EnemyStats.cs` — HP, DEF, interrupt bar, stun bar (STAT_SPEC compliant), IDamageable impl with DEF formula, world-space HP slider support, OnDied event
+  - `Dev/Enemy/EnemyAI.cs` — full rewrite: uses EnemyStats, subscribes OnDied, death state, finds nearest player from all tagged "Player"
+  - `Dev/Weapons/WeaponHitbox.cs` — trigger hitbox on weapon child, EnableHitbox/DisableHitbox (animation events), one-hit-per-swing HashSet, calls IDamageable.TakeDamage with PlayerStats.RawDamage
+  - `Dev/Player/PlayerCombat.cs` — added PlayerStats ref, _hitbox field, OnHitboxOpen/OnHitboxClose anim event methods, hitbox.Setup() on equip
+- Next: Phase 2 — NetworkEnemyStats + NetworkPlayerCombat damage sync
+- Pending Unity Editor work: add WeaponHitbox child + Trigger Collider to weapon prefabs; add OnHitboxOpen/OnHitboxClose anim events to attack clips; add EnemyStats + world HP slider to Skeleton prefab
+
+### 2026-05-16 (Phase 2 — local dev)
+- Phase 2 combat implemented (all code done, Unity Editor setup manual):
+  - `Dev/Enemy/EnemyStats.cs` — added OnHit, OnInterrupted, OnStunned events
+  - `Dev/Enemy/EnemyAI.cs` — hit reaction (GetDamaged trigger, OnDestroy unsub, ResetTrigger guard), death anim (Die trigger + OnDeathAnimEnd anim event + SinkAndDestroy coroutine, _sinking guard)
+  - `Dev/Player/PlayerStats.cs` — OnHpChanged event, 5 new derived props (StaminaRecovery, EquipLoad, CritRate, CritDamage, MovementSpeed)
+  - `UI/HUD/PlayerHUD.cs` — NEW: subscribes OnHpChanged, drives normalized Slider
+  - `UI/HUD/PlayerStatPanel.cs` — NEW: TAB toggle, shows 6 core stats + 8 derived stats via TMP_Text
+- Pending Unity Editor work (Phase 2):
+  - Enemy animator: GetDamaged trigger + state + Any State transition
+  - Enemy animator: Die trigger + Death state + Any State transition
+  - Death clip: OnDeathAnimEnd animation event at last frame
+  - Canvas: HP Slider (bottom-left) + PlayerHUD component assigned
+  - Canvas: Stat Panel (14 TMP_Text fields) + PlayerStatPanel component assigned
+- Additional fixes this session:
+  - GhostAfterimage: URP _BaseColor fix, mesh+mat Destroy, IsDashing flag (no false trigger on skeleton collision)
+  - EnemyAI: skeleton stops at attackRange, no longer walks into player
+  - PlayerStatPanel: Tab key (script must be on always-active parent, not panel itself), stat labels prefixed
+- [x] Phase 2 DONE (2026-05-16)
+- Next: Phase 3 — 1H deflect (parry), 1H+Shield block/defense
+
+### 2026-05-16 (Phase 3 — local dev)
+- Phase 3 combat implemented (all code done, Unity Editor setup manual):
+  - `Data/WeaponSO.cs` — added `baseGuardStability` field (shields set this)
+  - `Dev/Player/PlayerStats.cs` — added `currentStamina` runtime, `IsBlocking`/`IsParrying` flags, `GuardStability` prop (STRCurve×50 + weapon base), `SetGuardBase()`, stamina recovery in Update, `OnParried`/`OnGuardBreak`/`OnStaminaChanged` events, guard logic in TakeDamage (parry=0 dmg, block=stamina drain per GuardCost formula, guard break=fall through full dmg)
+  - `Dev/Player/PlayerCombat.cs` — 1H: Track1HBlock → Track1HParry (0.3s window coroutine), parry window sets IsParrying; Shield+Sword: sets playerStats.IsBlocking on RMB toggle; subscribes OnGuardBreak → HandleGuardBreak → GuardBreakRoutine (trigger + anim wait + unlock); EquipWeapon calls SetGuardBase; InterruptUpperOnly clears parry/block flags
+  - `UI/HUD/PlayerHUD.cs` — added staminaSlider + manaSlider (mana static=full, system pending)
+- Pending Unity Editor work (Phase 3):
+  - Animator: add `GuardBreak` trigger param
+  - Attack Layer: `Empty → Guard_Break` state (GuardBreak trigger), `Guard_Break → Empty` (Exit Time 1.0)
+  - Guard_Break clip needed (stumble/stagger — can reuse GetDamaged clip)
+  - Canvas: add Stamina Slider (green) + Mana Slider (blue) below HP bar; assign in PlayerHUD Inspector
+  - Shield WeaponSO: set `baseGuardStability` (30–60 recommended)
+- [x] Phase 3 DONE (2026-05-16)
+- Next: Phase 4 — Network HP sync, client join, damage over wire (PurrNet)
+
+### 2026-05-17 (WeaponSO projectile refactor)
+- `Data/WeaponSO.cs` — removed `throwPrefab`; projectile section now unified: `projectilePrefab` (prefab to spawn), `projectileForce` (physics: Bow/Spear), `projectileSpeed`+`projectileRange` (Projectile.cs: Staff/Wand), `manaCost` (Staff/Wand)
+- `Editor/WeaponSOEditor.cs` — NEW: custom Inspector hides Projectile section for non-projectile types (OneHand/TwoHand/Shield/Torch); Bow/Spear show force; Staff/Wand show speed+range+manaCost
+- `Dev/Player/PlayerCombat.cs` — removed hardcoded `arrowPrefab`, `magicBallPrefab`, `arrowForce`, `spearForce`, `magicBallManaCost`; all Execute methods now read from `_equippedSO`
+- `Network/Player/NetworkPlayerCombat.cs` — same refactor: removed hardcoded prefab/force/cost fields; Execute methods use `_equippedSO`
+- TODO (not configured): Staff skill (`StaffSpell` component + charge release) and Wand skill (`WandLaser` component + laser hold) have no WeaponSO config yet — need dedicated skill prefab refs or component-level setup per weapon prefab
+
+### 2026-05-17 (Phase 4 — host-authoritative damage)
+- `Network/Enemy/NetworkEnemyStats.cs` — NEW: NetworkBehaviour+IDamageable; TakeDamage routes to host via [ServerRpc(requireOwnership:false)]; host calls EnemyStats.TakeDamage then [ObserversRpc] SyncHpRpc → EnemyStats.SyncHp on all clients
+- `Network/Player/NetworkPlayerStats.cs` — NEW: same pattern for player HP; SyncHpRpc calls PlayerStats.SyncHp → OnHpChanged fires → PlayerHUD updates unchanged
+- `Dev/Enemy/EnemyStats.cs` — added SyncHp(float hp): sets currentHp, RefreshSlider, fires OnHit + OnDied (EnemyAI death anim fires on all clients)
+- `Dev/Player/PlayerStats.cs` — added SyncHp(float hp): sets currentHp, fires OnHpChanged + OnDied
+- `Dev/Enemy/EnemyAI.cs` — host-only guard: `if (!isOffline && !isServer) return` skips AI on pure clients
+- [x] Phase 4 code done
+- Pending Unity Editor work (Phase 4):
+  - Enemy prefab: add NetworkIdentity + NetworkTransform + NetworkEnemyStats; reorder NetworkEnemyStats ABOVE EnemyStats
+  - Player prefab (networked): add NetworkPlayerStats; reorder ABOVE PlayerStats
+  - Pre-placed scene enemies: add NetworkIdentity (PurrNet auto-registers)
+  - Runtime enemies: host spawns via NetworkManager.main.Spawn()
+
+### 2026-05-17 (Phase 1+2 — NetworkTest scene + lobby key)
+- `Network/Lobby/NetworkLobby.cs` — REWRITTEN: key-based lobby system; Host clicks → gets local IP+port → encodes to base36 key (~10 chars) → displays key; Client types key → decodes IP:port → connects; Stop button closes server+client
+- Key encoding: IP (4 bytes) + port (2 bytes) = 6 bytes → base36 string; encode/decode static methods in NetworkLobby; works on LAN only (no relay)
+- Deleted: PasskeyAuth.cs (not needed — key IS the join credential)
+- Pending Unity Editor work (Phase 1+2):
+  - Create `Assets/Scenes/NetworkTest.unity` (duplicate SampleScene or build fresh)
+  - Canvas: Host button, Join button, Stop button, Key InputField (client), Key display Text (host), Status text
+  - NetworkLobby Inspector: assign all 6 fields
+  - Phase 4 Editor setup still required first (NetworkIdentity on Enemy/Player prefabs)

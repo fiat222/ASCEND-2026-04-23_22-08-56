@@ -1,13 +1,15 @@
 using System.Collections;
 using UnityEngine;
+using PurrNet;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(EnemyStats))]
 public class EnemyAI : MonoBehaviour
 {
     [Header("Detection")]
-    [SerializeField] private float chaseRange  = 10f;
-    [SerializeField] private float attackRange = 2f;
+    [SerializeField] private float   chaseRange        = 10f;
+    [SerializeField] private float   attackRange       = 2.5f;
+    [SerializeField] private Vector3 attackCenterOffset = new Vector3(0f, 1f, 0f);
 
     [Header("Movement")]
     [SerializeField] private float walkSpeed     = 2f;
@@ -66,6 +68,10 @@ public class EnemyAI : MonoBehaviour
     {
         if (_state == State.Dead) return;
 
+        // Non-server clients skip AI — host simulates, NetworkTransform syncs position
+        if (NetworkManager.main != null && !NetworkManager.main.isOffline && !NetworkManager.main.isServer)
+            return;
+
         // Interrupted: freeze movement
         if (_stats.IsInterrupted)
         {
@@ -85,7 +91,7 @@ public class EnemyAI : MonoBehaviour
             if (_target == null) return;
         }
 
-        float dist = Vector3.Distance(transform.position, _target.position);
+        float dist = Vector3.Distance(transform.position + attackCenterOffset, _target.position);
         _attackTimer -= Time.deltaTime;
 
         switch (_state)
@@ -159,12 +165,14 @@ public class EnemyAI : MonoBehaviour
         string[] attacks = { attackStabParam, attackSlash01Param, attackSlash02Param };
         _anim.SetTrigger(attacks[Random.Range(0, attacks.Length)]);
 
-        yield return new WaitForSeconds(0.15f);
-        AnimatorStateInfo info = _anim.GetCurrentAnimatorStateInfo(0);
-        float clipLength = info.length > 0.1f ? info.length : 1f;
+        // Wait until animator starts transitioning into attack state
+        yield return new WaitUntil(() => _anim.IsInTransition(0));
+
+        AnimatorStateInfo state = _anim.GetNextAnimatorStateInfo(0);
+        float clipLength = state.length > 0.1f ? state.length : 1f;
 
         // Open hitbox at 30% — close at 60%
-        yield return new WaitForSeconds(clipLength * 0.3f - 0.15f);
+        yield return new WaitForSeconds(clipLength * 0.3f);
         _hitbox?.EnableHitbox();
         yield return new WaitForSeconds(clipLength * 0.3f);
         _hitbox?.DisableHitbox();
@@ -206,6 +214,15 @@ public class EnemyAI : MonoBehaviour
     }
 
     // ── Utility ────────────────────────────────────────────────────────────────
+
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 center = transform.position + attackCenterOffset;
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(center, attackRange);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, chaseRange);
+    }
 
     private void FindNearestPlayer()
     {

@@ -5,12 +5,36 @@
 2. **RTK always** — prefix all CLI commands with `rtk` (see below)
 3. **PlanMode before builds** — any major feature or build → use EnterPlanMode first, get approval, then implement
 4. **Update context.md** — after every meaningful change, append to Progress Log in `context.md`
+5. **Animator work** → use `/animator` skill (`ascend-animator`) for all Unity Animator state/transition/parameter setup
+6. **Serena** — use serena MCP tools for all C# symbol lookup, rename, diagnostics, and cross-reference. Always `activate_project` on session start.
+7. **Graphify** — graph lives at `graphify-out/graph.json`. Query it before answering architecture questions. Run `/graphify Assets/Scripts Assets/Prefabs --update` after significant code changes.
+
+## Serena Usage
+- Session start: call `activate_project` with path `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56`
+- Symbol lookup: use `find_symbol` / `get_symbols_overview` instead of grep where possible
+- Rename: always use `rename_symbol` (LSP-aware, updates all refs)
+- Diagnostics: `get_diagnostics_for_file` before declaring a fix complete
+- Cross-refs: `find_referencing_symbols` to find all callers before modifying a method
+
+## Graphify Usage
+- Graph: `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56\graphify-out\graph.json`
+- HTML viz: `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56\graphify-out\graph.html`
+- Python venv: `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56\.graphify_venv\Scripts\python.exe`
+- Query before answering "how does X connect to Y" questions
+- Update after adding new scripts: `/graphify Assets/Scripts Assets/Prefabs --update`
+- Current communities: Player Combat, Network Movement, Magic Weapons, Weapon Icons, Enemy AI, Hotbar & UI, Network Lobby, Bow & Projectile, VFX Textures, Weapon Data, Ghost Effect
 
 ## context.md
-- Path: `D:\PSU\Unity Game\ASCEND\context.md`
+- Path: `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56\context.md`
 - Gitignored — local only, never committed
 - Always read at session start for current project state
 - Always write progress after completing work
+
+## Session Start Checklist (MUST DO EVERY SESSION)
+1. Read `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56\context.md` — full project state, TODOs, progress log
+2. Read memory files in `C:\Users\ASUS\.claude\projects\D--PSU-Unity-Game-ASCEND-2026-04-23-22-08-56\memory\` — project overview, structure, preferences
+3. Call serena `activate_project` → `D:\PSU\Unity Game\ASCEND-2026-04-23_22-08-56`
+4. Confirm to user: "Read context.md + memory. Serena active. Current state: [brief summary]. TODOs: [top 3]."
 
 ---
 

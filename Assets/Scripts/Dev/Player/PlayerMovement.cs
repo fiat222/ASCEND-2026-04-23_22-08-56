@@ -17,8 +17,14 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float dashCooldown = 1f;
 
     [Header("References")]
-    [SerializeField] private Transform playerVisual;
-    [SerializeField] private Transform cameraTarget;
+    [SerializeField] private Transform   playerVisual;
+    [SerializeField] private Transform   cameraTarget;
+    [SerializeField] private PlayerStats playerStats;
+
+    [Header("Stamina Costs")]
+    [SerializeField] private float runStaminaDrain = 20f;
+    [SerializeField] private float dashStaminaCost = 30f;
+    [SerializeField] private float jumpStaminaCost = 15f;
 
     [Header("Animator Params")]
     [SerializeField] private string paramMoveX = "MoveX";
@@ -89,9 +95,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (!_isDashing && _dashCooldownTimer <= 0f && Input.GetKeyDown(KeyCode.V))
         {
-            _isDashing  = true;
-            _dashTimer  = dashDuration;
-            _dashDir    = moveDir.sqrMagnitude > 0.01f ? moveDir : transform.forward;
+            bool canDash = playerStats == null || playerStats.DrainStamina(dashStaminaCost);
+            if (canDash)
+            {
+                _isDashing = true;
+                _dashTimer = dashDuration;
+                _dashDir   = moveDir.sqrMagnitude > 0.01f ? moveDir : transform.forward;
+            }
         }
 
         if (_isDashing)
@@ -115,12 +125,23 @@ public class PlayerMovement : MonoBehaviour
 
             if (Input.GetButtonDown("Jump"))
             {
-                _verticalVel = Mathf.Sqrt(jumpHeight * -2f * gravity);
-                _anim.SetTrigger(paramJump);
+                bool canJump = playerStats == null || playerStats.DrainStamina(jumpStaminaCost);
+                if (canJump)
+                {
+                    _verticalVel = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                    _anim.SetTrigger(paramJump);
+                }
             }
         }
 
         _verticalVel += gravity * Time.deltaTime;
+
+        bool isMoving = moveDir.sqrMagnitude > 0.01f;
+        if (_isRunning && isMoving && playerStats != null)
+        {
+            bool stillHasStamina = playerStats.DrainStamina(runStaminaDrain * Time.deltaTime);
+            if (!stillHasStamina) _isRunning = false;
+        }
 
         float   speed    = _isRunning ? runSpeed : walkSpeed;
         Vector3 velocity = moveDir * speed;

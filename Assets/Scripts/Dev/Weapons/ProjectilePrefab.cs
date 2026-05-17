@@ -11,8 +11,10 @@ public class ProjectilePrefab : MonoBehaviour
     [Tooltip("90 if model points UP (Y-axis). 0 if model points FORWARD (Z-axis).")]
     public float rotationOffsetX = 90f;
 
-    private Rigidbody _rb;
-    private bool      _stuck;
+    private Rigidbody  _rb;
+    private bool       _stuck;
+    private PlayerStats _owner;
+    private WeaponSO    _weapon;
 
     private void Awake()
     {
@@ -21,6 +23,8 @@ public class ProjectilePrefab : MonoBehaviour
         _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         _rb.interpolation   = RigidbodyInterpolation.Interpolate;
     }
+
+    public void Setup(PlayerStats owner, WeaponSO weapon) { _owner = owner; _weapon = weapon; }
 
     public void Launch(Vector3 direction, float speed)
     {
@@ -47,11 +51,23 @@ public class ProjectilePrefab : MonoBehaviour
         if (_stuck) return;
         if (col.gameObject.CompareTag("Player")) return;
 
+        if (col.gameObject.CompareTag("Enemy"))
+        {
+            var target = col.gameObject.GetComponent<IDamageable>()
+                      ?? col.gameObject.GetComponentInParent<IDamageable>();
+            if (target != null)
+            {
+                float dmg = _owner != null ? _owner.RawDamage(_weapon)
+                          : (_weapon != null ? _weapon.damage : damage);
+                target.TakeDamage(dmg);
+            }
+            Destroy(gameObject);
+            return;
+        }
+
         _stuck = true;
-
-        _rb.isKinematic = true;
         _rb.velocity    = Vector3.zero;
-
+        _rb.isKinematic = true;
         transform.SetParent(col.transform);
         Destroy(gameObject, 10f);
     }

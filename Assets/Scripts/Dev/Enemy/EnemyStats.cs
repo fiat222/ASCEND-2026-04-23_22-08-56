@@ -152,4 +152,14 @@ public class EnemyStats : MonoBehaviour, IDamageable
 
     public bool IsInterrupted => _isInterrupted;
     public bool IsStunned     => _isStunned;
+
+    // Called on non-server clients by NetworkEnemyStats to sync host's result
+    public void SyncHp(float hp)
+    {
+        bool wasAlive = IsAlive;
+        currentHp = hp;
+        RefreshSlider();
+        OnHit?.Invoke();
+        if (currentHp <= 0f && wasAlive) OnDied?.Invoke();
+    }
 }

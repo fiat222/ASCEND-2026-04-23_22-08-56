@@ -1,34 +1,28 @@
 using System.Collections;
 using UnityEngine;
 using Drakkar.GameUtils;
-using MaykerStudio.Demo;
 
 public class PlayerCombat : MonoBehaviour
 {
+    [Header("Combat Stats")]
+    [SerializeField] private PlayerStats playerStats;
+
     [Header("Weapon Slots & UI")]
     [SerializeField] private Transform        weaponSlot;
     [SerializeField] private Transform        offHandSlot;
     [SerializeField] private HotbarController hotbar;
 
-    [Header("Magic Ball")]
-    public GameObject magicBallPrefab;
-    public Transform  magicPoint;
-    public float      magicBallSpeed    = 15f;
-    public float      magicBallDistance = 50f;
+    [Header("Projectile Points")]
+    public Transform magicPoint;
+    public Transform shotPoint;
+    public Transform throwPoint;
+    [SerializeField] private Transform handStringAnchor;
 
     [Header("Staff Spell")]
     private StaffSpell staffSpell;
 
     [Header("Wand Laser")]
     private WandLaser wandLaser;
-
-    [Header("Bow & Spear Settings")]
-    public GameObject arrowPrefab;
-    public Transform  shotPoint;
-    public float      arrowForce = 1500f;
-    public Transform  throwPoint;
-    public float      spearForce = 25f;
-    [SerializeField] private Transform handStringAnchor;
 
     [Header("Aim")]
     [SerializeField] private float     aimDistance = 100f;
@@ -50,11 +44,19 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private string idleBowParam   = "IsBowIdle";
     [SerializeField] private string idleShieldParam = "IsShieldIdle";
 
+    [Header("Parry")]
+    [SerializeField] private float  parryWindow1H    = 0.3f;
+    [SerializeField] private string guardBreakParam  = "GuardBreak";
+
     [Header("1H Block Animation Params")]
     [SerializeField] private string is1HBlockParam = "Is1HBlock";
 
     [Header("2H Block Animation Params")]
-    [SerializeField] private string is2HBlockParam = "Is2HBlock";
+    [SerializeField] private string is2HBlockParam       = "Is2HBlock";
+    [SerializeField] private string attack2HCounterParam  = "Attack2HCounter";  // Upper layer (1)
+    [SerializeField] private string counter2HBaseParam   = "Counter2HBase";    // Base layer (0)
+    [SerializeField] private string counterStateName     = "2H_Counter";
+    [SerializeField] private float  counterWindow2H      = 0.5f;
 
     [Header("Shield Animation Params")]
     [SerializeField] private string isShieldBlockParam = "IsShieldBlock";
@@ -80,9 +82,10 @@ public class PlayerCombat : MonoBehaviour
     private Animator    _anim;
 
     // Main hand
-    private GameObject  _equippedWeapon;
-    private WeaponSO    _equippedSO;
+    private GameObject   _equippedWeapon;
+    private WeaponSO     _equippedSO;
     private DrakkarTrail _weaponTrail;
+    private WeaponHitbox _hitbox;
 
     // Off hand
     private GameObject  _equippedOffHand;
@@ -97,6 +100,13 @@ public class PlayerCombat : MonoBehaviour
     private bool _isShieldBlocking;         // โล่เป็น main hand (WeaponType.Shield)
     private bool _isShieldSwordBlocking;    // โล่เป็น off-hand + ดาบ 1H
     private bool _isHoldingSpear;
+
+    // 1H Parry
+    private Coroutine _parry1HCoroutine;
+
+    // 2H Counter
+    private bool      _canCounter2H;
+    private Coroutine _counter2HWindowCoroutine;
 
     // ─── Helpers ──────────────────────────────────────────────
     /// <summary>ถือโล่เป็น off-hand อยู่ไหม</summary>
@@ -114,6 +124,13 @@ public class PlayerCombat : MonoBehaviour
             hotbar.OnOffHandChanged += EquipOffHand;
             EquipWeapon(hotbar.SelectedWeapon);
         }
+
+        if (playerStats != null) playerStats.OnGuardBreak += HandleGuardBreak;
+    }
+
+    private void OnDestroy()
+    {
+        if (playerStats != null) playerStats.OnGuardBreak -= HandleGuardBreak;
     }
 
     private void Update()
@@ -132,7 +149,7 @@ public class PlayerCombat : MonoBehaviour
         if (HasShieldOffHand && _equippedSO.weaponType == WeaponType.OneHand)
             TrackShieldSwordBlock();         // ดาบ + โล่ off-hand
         else if (_equippedSO.weaponType == WeaponType.OneHand)
-            Track1HBlock();
+            Track1HParry();
         else if (_equippedSO.weaponType == WeaponType.TwoHand)
             Track2HBlock();
         else if (_equippedSO.weaponType == WeaponType.Shield)
@@ -197,6 +214,7 @@ public class PlayerCombat : MonoBehaviour
         _isAttacking = true;
         SetInAction(true);
         ClearAllIdle();
+        playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
 
         _anim.SetTrigger(GetAttackParam());
 
@@ -252,6 +270,7 @@ public class PlayerCombat : MonoBehaviour
     private IEnumerator StaffSkillRoutine()
     {
         _isAttacking = true;
+        playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
         _anim.SetTrigger(skillStaffParam);
 
         yield return null;
@@ -292,21 +311,37 @@ public class PlayerCombat : MonoBehaviour
             StartCoroutine(AttackRoutine());
     }
 
-    // ─── 1H BLOCK (ไม่มีโล่) ─────────────────────────────────
-    private void Track1HBlock()
+    // ─── 1H PARRY (ไม่มีโล่ — แตะ RMB = parry window สั้น) ──────────────────
+    private void Track1HParry()
     {
-        if (Input.GetMouseButtonDown(1) && !_is1HBlocking)
-        {
-            _is1HBlocking = true;
-            if (!_isAttacking) { SetInAction(true); ClearAllIdle(); _anim.SetBool(is1HBlockParam, true); }
-        }
+        if (Input.GetMouseButtonDown(1) && _parry1HCoroutine == null && !_isAttacking)
+            _parry1HCoroutine = StartCoroutine(Parry1HRoutine());
 
         if (Input.GetMouseButtonUp(1) && _is1HBlocking)
         {
+            if (_parry1HCoroutine != null) { StopCoroutine(_parry1HCoroutine); _parry1HCoroutine = null; }
             _is1HBlocking = false;
+            playerStats.IsParrying = false;
             _anim.SetBool(is1HBlockParam, false);
             if (!_isAttacking) { SetInAction(false); RestoreIdle(); }
         }
+    }
+
+    private IEnumerator Parry1HRoutine()
+    {
+        _is1HBlocking = true;
+        SetInAction(true);
+        ClearAllIdle();
+        _anim.SetBool(is1HBlockParam, true);
+        playerStats.IsParrying = true;
+
+        yield return new WaitForSeconds(parryWindow1H);
+
+        // Parry window expired — switch to hold-block (lower guard than 2H, no base stability)
+        playerStats.IsParrying = false;
+        playerStats.IsBlocking = true;
+        _parry1HCoroutine = null;
+        // _is1HBlocking + Is1HBlock stay true — RMB release clears everything
     }
 
     private void Handle1HInput()
@@ -328,6 +363,8 @@ public class PlayerCombat : MonoBehaviour
         if (Input.GetMouseButtonDown(1) && !_isShieldSwordBlocking)
         {
             _isShieldSwordBlocking = true;
+            playerStats.IsBlocking = true;
+            Debug.Log($"[Block] Shield+Sword block START — HasShieldOffHand={HasShieldOffHand} offHandSO={_offHandSO?.weaponName} mainSO={_equippedSO?.weaponName}");
             if (!_isAttacking)
             {
                 SetInAction(true);
@@ -340,6 +377,8 @@ public class PlayerCombat : MonoBehaviour
         if (Input.GetMouseButtonUp(1) && _isShieldSwordBlocking)
         {
             _isShieldSwordBlocking = false;
+            playerStats.IsBlocking = false;
+            Debug.Log("[Block] Shield+Sword block END");
             _anim.SetBool(isShieldSwordBlockParam, false);
             if (!_isAttacking) { SetInAction(false); RestoreIdle(); }
         }
@@ -365,6 +404,7 @@ public class PlayerCombat : MonoBehaviour
     private IEnumerator ParryRoutine()
     {
         _isAttacking = true;
+        playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
 
         // ปิด block ชั่วคราวระหว่าง parry anim
         _anim.SetBool(isShieldSwordBlockParam, false);
@@ -393,27 +433,119 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    // ─── GUARD BREAK ─────────────────────────────────────────
+    private void HandleGuardBreak()
+    {
+        _is1HBlocking          = false;
+        _is2HBlocking          = false;
+        _isShieldBlocking      = false;
+        _isShieldSwordBlocking = false;
+        playerStats.IsBlocking = false;
+        playerStats.IsParrying = false;
+        _anim.SetBool(is1HBlockParam,          false);
+        _anim.SetBool(is2HBlockParam,          false);
+        _anim.SetBool(isShieldBlockParam,      false);
+        _anim.SetBool(isShieldSwordBlockParam, false);
+        StartCoroutine(GuardBreakRoutine());
+    }
+
+    private IEnumerator GuardBreakRoutine()
+    {
+        _isAttacking = true;
+        SetInAction(true);
+        ClearAllIdle();
+        _anim.SetTrigger(guardBreakParam);
+
+        yield return new WaitUntil(() =>
+            _anim.IsInTransition(attackAnimatorLayer) ||
+            !_anim.GetCurrentAnimatorStateInfo(attackAnimatorLayer).IsName("Empty"));
+
+        AnimatorStateInfo state = _anim.IsInTransition(attackAnimatorLayer)
+            ? _anim.GetNextAnimatorStateInfo(attackAnimatorLayer)
+            : _anim.GetCurrentAnimatorStateInfo(attackAnimatorLayer);
+
+        float clipLength = state.length > 0.1f ? state.length : 0.8f;
+        yield return new WaitForSeconds(clipLength);
+
+        _isAttacking = false;
+        SetInAction(false);
+        RestoreIdle();
+    }
+
     // ─── 2H BLOCK ─────────────────────────────────────────────
     private void Track2HBlock()
     {
         if (Input.GetMouseButtonDown(1) && !_is2HBlocking)
         {
             _is2HBlocking = true;
+            playerStats.IsBlocking = true;
             if (!_isAttacking) { SetInAction(true); ClearAllIdle(); _anim.SetBool(is2HBlockParam, true); }
         }
 
         if (Input.GetMouseButtonUp(1) && _is2HBlocking)
         {
             _is2HBlocking = false;
+            playerStats.IsBlocking = false;
             _anim.SetBool(is2HBlockParam, false);
+
+            // open counter window on block release
+            _canCounter2H = true;
+            if (_counter2HWindowCoroutine != null) StopCoroutine(_counter2HWindowCoroutine);
+            _counter2HWindowCoroutine = StartCoroutine(Counter2HWindowRoutine());
+
             if (!_isAttacking) { SetInAction(false); RestoreIdle(); }
         }
     }
 
+    private IEnumerator Counter2HWindowRoutine()
+    {
+        yield return new WaitForSeconds(counterWindow2H);
+        _canCounter2H = false;
+        _counter2HWindowCoroutine = null;
+    }
+
     private void Handle2HInput()
     {
-        if (Input.GetMouseButtonDown(0) && !_is2HBlocking)
+        if (!Input.GetMouseButtonDown(0)) return;
+
+        if (_canCounter2H)
+            StartCoroutine(Counter2HRoutine());
+        else if (!_is2HBlocking)
             StartCoroutine(AttackRoutine());
+    }
+
+    private IEnumerator Counter2HRoutine()
+    {
+        _canCounter2H = false;
+        if (_counter2HWindowCoroutine != null) { StopCoroutine(_counter2HWindowCoroutine); _counter2HWindowCoroutine = null; }
+        playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
+
+        _isAttacking = true;
+        SetInAction(true);
+        ClearAllIdle();
+        _anim.SetBool(is2HBlockParam, false);
+        _anim.SetTrigger(counter2HBaseParam);   // Layer 0
+        _anim.SetTrigger(attack2HCounterParam); // Layer 1
+
+        // Poll Base Layer (0) — drives full-body clip length for 360 flip
+        yield return new WaitUntil(() =>
+            _anim.IsInTransition(0) ||
+            _anim.GetCurrentAnimatorStateInfo(0).IsName(counterStateName));
+
+        AnimatorStateInfo state = _anim.IsInTransition(0)
+            ? _anim.GetNextAnimatorStateInfo(0)
+            : _anim.GetCurrentAnimatorStateInfo(0);
+
+        float clipLength = state.length > 0.1f ? state.length : 1f;
+
+        _weaponTrail?.Begin();
+        yield return new WaitForSeconds(clipLength);
+        _weaponTrail?.End();
+
+        _isAttacking = false;
+        _is2HBlocking = false;
+        SetInAction(false);
+        RestoreIdle();
     }
 
     // ─── SHIELD MAIN HAND ─────────────────────────────────────
@@ -422,12 +554,14 @@ public class PlayerCombat : MonoBehaviour
         if (Input.GetMouseButtonDown(1) && !_isShieldBlocking)
         {
             _isShieldBlocking = true;
+            playerStats.IsBlocking = true;
             if (!_isAttacking) { SetInAction(true); ClearAllIdle(); _anim.SetBool(isShieldBlockParam, true); }
         }
 
         if (Input.GetMouseButtonUp(1) && _isShieldBlocking)
         {
             _isShieldBlocking = false;
+            playerStats.IsBlocking = false;
             _anim.SetBool(isShieldBlockParam, false);
             if (!_isAttacking) { SetInAction(false); RestoreIdle(); }
         }
@@ -444,6 +578,7 @@ public class PlayerCombat : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
             SetInAction(true);
             ClearAllIdle();
             UpdateWeaponGrip(true);
@@ -504,6 +639,7 @@ public class PlayerCombat : MonoBehaviour
     private IEnumerator FinishSpearThrowRoutine()
     {
         _isAttacking = true;
+        playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
 
         yield return new WaitUntil(() =>
             _anim.IsInTransition(attackAnimatorLayer) ||
@@ -542,22 +678,36 @@ public class PlayerCombat : MonoBehaviour
             : ray.origin + ray.direction * aimDistance;
     }
 
+    // ─── HITBOX (Animation Events) ────────────────────────────
+    public void OnHitboxOpen()  => _hitbox?.EnableHitbox();
+    public void OnHitboxClose() => _hitbox?.DisableHitbox();
+
     // ─── EVENTS (Animation) ───────────────────────────────────
     public void ExecuteShoot()
     {
-        if (arrowPrefab == null || shotPoint == null) return;
+        if (_equippedSO?.projectilePrefab == null || shotPoint == null) return;
         Vector3 dir = (GetCrosshairTarget() - shotPoint.position).normalized;
-        GameObject arrow = Instantiate(arrowPrefab, shotPoint.position, Quaternion.LookRotation(dir));
-        if (arrow.TryGetComponent<ProjectilePrefab>(out var proj)) proj.Launch(dir, arrowForce);
+        GameObject arrow = Instantiate(_equippedSO.projectilePrefab, shotPoint.position, Quaternion.LookRotation(dir));
+        if (arrow.TryGetComponent<ProjectilePrefab>(out var proj))
+        {
+            proj.Setup(playerStats, _equippedSO);
+            proj.Launch(dir, _equippedSO.projectileForce);
+        }
     }
 
     public void ExecuteMagicBall()
     {
-        if (magicBallPrefab == null || magicPoint == null) return;
+        if (_equippedSO?.projectilePrefab == null || magicPoint == null) return;
+        if (playerStats != null && !playerStats.DrainMana(_equippedSO.manaCost)) return;
+
         Vector3 dir = (GetCrosshairTarget() - magicPoint.position).normalized;
-        GameObject ball = Instantiate(magicBallPrefab, magicPoint.position, Quaternion.LookRotation(dir));
-        if (ball.TryGetComponent<Projectile>(out var proj))
-        { proj.speed = magicBallSpeed; proj.distance = magicBallDistance; proj.Fire(); }
+        GameObject ball = Instantiate(_equippedSO.projectilePrefab, magicPoint.position, Quaternion.LookRotation(dir));
+        if (ball.TryGetComponent<MagicBallDamage>(out var dmg))
+        {
+            dmg.speed    = _equippedSO.projectileSpeed;
+            dmg.maxRange = _equippedSO.projectileRange;
+            dmg.Setup(playerStats, _equippedSO);
+        }
     }
 
     public void OnStaffImpact()  => staffSpell?.Cast();
@@ -570,10 +720,14 @@ public class PlayerCombat : MonoBehaviour
     public void ExecuteSpearThrow()
     {
         if (_equippedSO == null || throwPoint == null) return;
-        GameObject prefabToThrow = _equippedSO.throwPrefab != null ? _equippedSO.throwPrefab : _equippedSO.prefab;
+        GameObject prefabToThrow = _equippedSO.projectilePrefab != null ? _equippedSO.projectilePrefab : _equippedSO.prefab;
         Vector3 dir = (GetCrosshairTarget() - throwPoint.position).normalized;
         GameObject spear = Instantiate(prefabToThrow, throwPoint.position, Quaternion.LookRotation(dir));
-        if (spear.TryGetComponent<ProjectilePrefab>(out var proj)) proj.Launch(dir, spearForce);
+        if (spear.TryGetComponent<ProjectilePrefab>(out var proj))
+        {
+            proj.Setup(playerStats, _equippedSO);
+            proj.Launch(dir, _equippedSO.projectileForce);
+        }
         StartCoroutine(HideWeaponInHand());
     }
 
@@ -590,11 +744,15 @@ public class PlayerCombat : MonoBehaviour
         InterruptUpperOnly();
 
         if (_equippedWeapon != null) Destroy(_equippedWeapon);
+        _hitbox = null;
 
         _equippedSO  = so;
         _isAttacking = false;
         _isHoldingSpear = _is1HBlocking = _is2HBlocking = _isShieldBlocking = false;
         _isShieldSwordBlocking = false;
+
+        playerStats?.SetGuardBase(so?.baseGuardStability ?? 0f);
+        if (playerStats != null) { playerStats.IsBlocking = false; playerStats.IsParrying = false; }
 
         UpdateWeaponGrip(false);
         ClearAllIdle();
@@ -630,6 +788,9 @@ public class PlayerCombat : MonoBehaviour
         if (rb != null) rb.isKinematic = true;
 
         _weaponTrail = _equippedWeapon.GetComponentInChildren<DrakkarTrail>();
+
+        _hitbox = _equippedWeapon.GetComponentInChildren<WeaponHitbox>();
+        _hitbox?.Setup(playerStats, so);
 
         if (so.weaponType == WeaponType.Bow)
         {
@@ -708,6 +869,11 @@ public class PlayerCombat : MonoBehaviour
         _isAttacking = _isHoldingSpear = _isStaffCharging = false;
         _is1HBlocking = _is2HBlocking = _isShieldBlocking = false;
         _isShieldSwordBlocking = _isWandHolding = false;
+        _canCounter2H = false;
+        _counter2HWindowCoroutine = null;
+        _parry1HCoroutine = null;
+
+        if (playerStats != null) { playerStats.IsParrying = false; playerStats.IsBlocking = false; }
 
         staffSpell?.CancelCast();
         wandLaser?.StopFire();

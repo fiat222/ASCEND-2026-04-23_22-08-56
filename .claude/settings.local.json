@@ -3,7 +3,18 @@
     "allow": [
       "Bash(xargs grep *)",
       "Bash(rtk grep *)",
-      "Bash(rtk ls *)"
+      "Bash(rtk ls *)",
+      "Skill(ascend-animator)",
+      "PowerShell(uv venv *)",
+      "Bash(docker run *)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(rtk git *)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git *)",
+      "Bash(New-Item *)",
+      "mcp__plugin_claude-mem_mcp-search__smart_search"
     ]
   }
 }

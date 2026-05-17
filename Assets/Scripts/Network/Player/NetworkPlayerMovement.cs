@@ -34,6 +34,8 @@ public class NetworkPlayerMovement : NetworkBehaviour
     [Header("Spine Aim")]
     [SerializeField] private Transform spineBone;
 
+    public bool IsDashing => _isDashing;
+
     private CharacterController _cc;
     private Animator            _anim;
     private float               _verticalVel;
@@ -46,7 +48,18 @@ public class NetworkPlayerMovement : NetworkBehaviour
     protected override void OnSpawned()
     {
         _cc   = GetComponent<CharacterController>();
-        _anim = playerVisual.GetComponentInChildren<Animator>();
+        _anim = playerVisual != null
+            ? playerVisual.GetComponentInChildren<Animator>(true)
+            : GetComponentInChildren<Animator>(true);
+    }
+
+    protected override void OnOwnerChanged(PlayerID? oldOwner, PlayerID? newOwner, bool asServer)
+    {
+        Debug.Log($"[Movement] OnOwnerChanged asServer={asServer} isOwner={isOwner} newOwner={newOwner}");
+        if (asServer) return;
+
+        var vcam = GetComponentInChildren<CinemachineVirtualCamera>(true);
+        if (vcam != null) vcam.gameObject.SetActive(isOwner);
 
         if (!isOwner) return;
 
@@ -109,7 +122,7 @@ public class NetworkPlayerMovement : NetworkBehaviour
         }
 
         bool isGrounded = _cc.isGrounded;
-        _anim.SetBool(paramIsGround, isGrounded);
+        if (_anim != null) _anim.SetBool(paramIsGround, isGrounded);
 
         if (isGrounded)
         {
@@ -118,7 +131,7 @@ public class NetworkPlayerMovement : NetworkBehaviour
             if (Input.GetButtonDown("Jump"))
             {
                 _verticalVel = Mathf.Sqrt(jumpHeight * -2f * gravity);
-                _anim.SetTrigger(paramJump);
+                if (_anim != null) _anim.SetTrigger(paramJump);
                 SyncJumpServerRpc();
             }
         }
