@@ -9742,7 +9742,8 @@ GameObject:
   - component: {fileID: 1443827206763333024}
   - component: {fileID: 5414502907001620220}
   - component: {fileID: 6566753380959143022}
-  - component: {fileID: 6224169216628655353}
+  - component: {fileID: 6223989905824996164}
+  - component: {fileID: 5061056189081772542}
   m_Layer: 0
   m_Name: Normal Ball
   m_TagString: Untagged
@@ -14612,11 +14613,34 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &6224169216628655353
+--- !u!136 &6223989905824996164
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2012330558225203095}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 2.7
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5061056189081772542
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -14625,12 +14649,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 2012330558225203095}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f421297964672ed4b8246b0b1ee0ef17, type: 3}
+  m_Script: {fileID: 11500000, guid: 409802068911821439201c1d2168e4f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SpawnWhenFinish: {fileID: 0}
-  speed: 10
-  distance: 20
+  impactPrefab: {fileID: 1035977224672214417, guid: af7aaaf95aed1df44adee460d9b9787c, type: 3}
 --- !u!1 &2338585910487987994
 GameObject:
   m_ObjectHideFlags: 0

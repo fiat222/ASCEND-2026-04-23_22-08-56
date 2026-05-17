@@ -5,11 +5,13 @@ TagManager:
   serializedVersion: 2
   tags:
   - Grip_Point
+  - Enemy
+  - Crosshair
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Enemy
   - Water
   - UI
   - Player

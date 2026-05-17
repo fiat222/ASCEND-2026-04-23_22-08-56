@@ -93,8 +93,38 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: acd76795deeadd846a39bed2115bcc9b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1747963706752246746}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: acd76795deeadd846a39bed2115bcc9b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6083894061206119137}
   m_SourcePrefab: {fileID: 100100000, guid: acd76795deeadd846a39bed2115bcc9b, type: 3}
+--- !u!1 &8483383849079169798 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: acd76795deeadd846a39bed2115bcc9b, type: 3}
+  m_PrefabInstance: {fileID: 8753415994135502423}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6083894061206119137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8483383849079169798}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00a6c1048d0a22943b056d746e467e8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  aoeIndicatorPrefab: {fileID: 2237586472700665092, guid: 061a2ffb64bc8b14485deb635cc5ce43, type: 3}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 1
+  aoeRadius: 10
+  impactVFXPrefab: {fileID: 6933848829093734631, guid: 44404b60fb028d24aa17af3e6016dea4, type: 3}
+  damage: 30
+  damageMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!4 &9147048360972532156 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: acd76795deeadd846a39bed2115bcc9b, type: 3}

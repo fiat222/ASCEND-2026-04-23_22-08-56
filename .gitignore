@@ -13,7 +13,31 @@
 # Claude Code local context (not for version control)
 context.md
 CLAUDE.md
+GameOverview.md
+STAT_SPEC.md
 .agent/
+
+# AI / graphify artifacts
+graphify-out/
+.graphify_venv/
+.graphify_python
+.graphify_detect.json
+.graphify_extract.json
+.graphify_ast.json
+.graphify_semantic.json
+.graphify_analysis.json
+.graphify_labels.json
+.graphify_cached.json
+.graphify_uncached.txt
+.graphify_semantic_new.json
+.graphify_old.json
+.graphify_incremental.json
+.graphify_transcripts.json
+.graphify_*.py
+.graphify_chunk_*.json
+
+# Serena
+.serena/
 
 .utmp/
 /[Ll]ibrary/
