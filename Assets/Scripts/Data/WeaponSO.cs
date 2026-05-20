@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public enum WeaponType { OneHand, TwoHand, Staff, Shield, Spear, Bow, Wand, Torch }
-public enum AttackType { OneHand, TwoHand, Magic, Shield, Spear, Bow, Torch }
+public enum AttackType { OneHand, TwoHand, Magic, Shield, Spear, Bow, Torch, Slash, Blunt, Pierce, Fire, Ice }
 
 public enum ScalingGrade { None, E, D, C, B, A, S }
 
@@ -49,6 +49,12 @@ public class WeaponSO : ScriptableObject
     public float DexScale => GradeToValue(dexScaling);
     public float ArcScale => GradeToValue(arcScaling);
 
+    [Header("Stagger")]
+    public float baseStagger = 25f;
+    public ScalingGrade staggerScaling = ScalingGrade.C;  // which stat scales stagger
+
+    public float StaggerScale => GradeToValue(staggerScaling);
+
     private static float GradeToValue(ScalingGrade grade) => grade switch
     {
         ScalingGrade.S    => 1.00f,
@@ -80,4 +86,19 @@ public class WeaponSO : ScriptableObject
     /// </summary>
     public bool CanEquipOffHand => weaponType == WeaponType.Shield
                                 || weaponType == WeaponType.Torch;
+
+    /// <summary>
+    /// Get stagger multiplier based on attack type.
+    /// Slash = 0.5, Blunt = 1.0, Pierce = 0.7, Magic = 0.3, Fire/Ice = 0.4, others = 1.0
+    /// </summary>
+    public float GetStaggerMultiplier() => AttackType switch
+    {
+        AttackType.Slash  => 0.5f,
+        AttackType.Blunt   => 1.0f,
+        AttackType.Pierce  => 0.7f,
+        AttackType.Magic   => 0.3f,
+        AttackType.Fire    => 0.4f,
+        AttackType.Ice     => 0.4f,
+        _                  => 1.0f
+    };
 }

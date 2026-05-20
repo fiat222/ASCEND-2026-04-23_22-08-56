@@ -62,11 +62,20 @@ public class WeaponHitbox : MonoBehaviour
 
         _hitThisSwing.Add(other);
 
+        // Calculate and apply damage
         float rawDmg = _owner != null
             ? _owner.RawDamage(_weapon)
             : (_weapon != null ? _weapon.damage : 5f);
 
-        Debug.Log($"[WeaponHitbox] Dealing {rawDmg} to {other.gameObject.name}");
+        Debug.Log($"[WeaponHitbox] Dealing {rawDmg} damage to {other.gameObject.name}");
         target.TakeDamage(rawDmg);
+
+        // Calculate and apply stagger
+        float staggerDmg = _owner != null
+            ? _owner.CalculateStagger(_weapon)
+            : (_weapon != null ? _weapon.baseStagger : 25f);
+
+        Debug.Log($"[WeaponHitbox] Applying {staggerDmg} stagger to {other.gameObject.name}");
+        target.TakeStagger(staggerDmg);
     }
 }

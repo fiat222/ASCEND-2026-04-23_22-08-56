@@ -78,12 +78,20 @@ public class EnemyStats : MonoBehaviour, IDamageable
         float finalDmg = rawDamage * (100f / (100f + def)) * _activeDamageBonus;
         currentHp = Mathf.Max(0f, currentHp - finalDmg);
 
-        AccumulateStagger(rawDamage);
         RefreshSlider();
         OnHit?.Invoke();
 
         if (currentHp <= 0f)
             OnDied?.Invoke();
+    }
+
+    public void TakeStagger(float staggerDmg)
+    {
+        if (!IsAlive) return;
+
+        Debug.Log($"[EnemyStats] TakeStagger: {staggerDmg:F1} (Interrupt: {interruptAccum:F1}/{_currentInterruptThreshold:F1}, Stun: {stunAccum:F1}/{_currentStunThreshold:F1})");
+
+        AccumulateStagger(staggerDmg);
     }
 
     // ── Stagger logic ──────────────────────────────────────────────────────────
