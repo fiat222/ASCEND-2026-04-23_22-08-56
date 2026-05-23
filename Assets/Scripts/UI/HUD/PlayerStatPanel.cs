@@ -26,17 +26,15 @@ public class PlayerStatPanel : MonoBehaviour
 
     private void Awake() => panel.SetActive(false);
 
-    private void Update()
+    public void ConnectStats(PlayerStats stats)
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
-            TogglePanel();
+        if (stats != null) playerStats = stats;
     }
 
-    private void TogglePanel()
+    public void SetVisible(bool visible)
     {
-        bool next = !panel.activeSelf;
-        panel.SetActive(next);
-        if (next) Refresh();
+        panel.SetActive(visible);
+        if (visible) Refresh();
     }
 
     private void Refresh()

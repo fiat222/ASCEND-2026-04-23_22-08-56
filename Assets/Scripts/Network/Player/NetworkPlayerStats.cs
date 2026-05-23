@@ -10,9 +10,15 @@ public class NetworkPlayerStats : NetworkBehaviour, IDamageable
     protected override void OnSpawned()
     {
         if (!isOwner) return;
-        // Wire local player's stats to the HUD (player spawns at runtime, can't assign in Inspector)
-        var hud = FindObjectOfType<PlayerHUD>();
-        hud?.ConnectStats(_ps);
+        FindObjectOfType<PlayerHUD>()?.ConnectStats(_ps);
+        FindObjectOfType<PlayerStatPanel>()?.ConnectStats(_ps);
+
+        var inv = GetComponent<NetworkInventory>();
+        if (inv != null)
+        {
+            FindObjectOfType<HotbarController>()?.ConnectInventory(inv);
+            FindObjectOfType<InventoryUI>()?.ConnectInventory(inv);
+        }
     }
 
     public void TakeDamage(float raw)

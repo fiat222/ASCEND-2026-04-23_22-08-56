@@ -9,6 +9,7 @@ public class MagicBallDamage : MonoBehaviour
     [Header("Movement")]
     public float speed    = 15f;
     public float maxRange = 50f;
+    public bool  visualOnly = false;
 
     private PlayerStats _owner;
     private WeaponSO    _weapon;
@@ -45,7 +46,7 @@ public class MagicBallDamage : MonoBehaviour
         if (_hit) return;
         if (other.CompareTag("Player")) return;
 
-        if (other.CompareTag("Enemy"))
+        if (other.CompareTag("Enemy") && !visualOnly)
         {
             var target = other.GetComponent<IDamageable>()
                       ?? other.GetComponentInParent<IDamageable>();

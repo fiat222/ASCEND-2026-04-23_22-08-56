@@ -109,9 +109,8 @@ public class PlayerCombat : MonoBehaviour
     private Coroutine _counter2HWindowCoroutine;
 
     // ─── Helpers ──────────────────────────────────────────────
-    /// <summary>ถือโล่เป็น off-hand อยู่ไหม</summary>
-    private bool HasShieldOffHand => _offHandSO != null
-                                  && _offHandSO.weaponType == WeaponType.Shield;
+    private bool HasShieldOffHand => _offHandSO != null && _offHandSO.weaponType == WeaponType.Shield;
+    public  bool IsStaffCharging  => _isStaffCharging;
 
     // ─── Unity ────────────────────────────────────────────────
     private void Start()
@@ -137,12 +136,22 @@ public class PlayerCombat : MonoBehaviour
     {
         if (_equippedSO == null) return;
 
-        // Staff charging release
-        if (_isStaffCharging && Input.GetMouseButtonUp(1))
+        if (_isStaffCharging)
         {
-            _isStaffCharging = false;
-            StartCoroutine(StaffSkillRoutine());
-            return;
+            if (Input.GetMouseButtonUp(1))
+            {
+                _isStaffCharging = false;
+                StartCoroutine(StaffSkillRoutine());
+                return;
+            }
+            if (GetComponent<PlayerMovement>()?.IsDashing == true)
+            {
+                _isStaffCharging = false;
+                staffSpell?.CancelCast();
+                SetInAction(false);
+                RestoreIdle();
+                return;
+            }
         }
 
         // ─── Block tracking (runs even while attacking) ────────
@@ -710,7 +719,19 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    public void OnStaffImpact()  => staffSpell?.Cast();
+    public void OnStaffImpact()
+    {
+        playerStats?.DrainMana(_equippedSO?.manaCost ?? 0f);
+        staffSpell?.Cast();
+    }
+
+    public void OnStaffSkillEnd()
+    {
+        StopAllCoroutines();
+        _isAttacking = false;
+        SetInAction(false);
+        RestoreIdle();
+    }
 
     public void OnWandFireStart()
     {

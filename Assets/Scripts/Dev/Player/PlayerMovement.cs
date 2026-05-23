@@ -43,6 +43,7 @@ public class PlayerMovement : MonoBehaviour
 
     private CharacterController _cc;
     private Animator            _anim;
+    private PlayerCombat        _combat;
     private float               _verticalVel;
     private bool                _isDashing;
     public  bool                IsDashing => _isDashing;
@@ -53,8 +54,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
-        _cc   = GetComponent<CharacterController>();
-        _anim = playerVisual.GetComponentInChildren<Animator>();
+        _cc     = GetComponent<CharacterController>();
+        _combat = GetComponent<PlayerCombat>();
+        _anim   = playerVisual.GetComponentInChildren<Animator>();
 
         if (string.IsNullOrEmpty(xAxis.m_InputAxisName)) xAxis.m_InputAxisName = "Mouse X";
         if (string.IsNullOrEmpty(yAxis.m_InputAxisName)) yAxis.m_InputAxisName = "Mouse Y";
@@ -84,6 +86,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
+        if (_combat != null && _combat.IsStaffCharging)
+        {
+            _verticalVel += gravity * Time.deltaTime;
+            if (_cc.isGrounded && _verticalVel < 0f) _verticalVel = -2f;
+            _cc.Move(new Vector3(0f, _verticalVel, 0f) * Time.deltaTime);
+            _anim?.SetFloat(paramMoveX, 0f, 0.1f, Time.deltaTime);
+            _anim?.SetFloat(paramMoveY, 0f, 0.1f, Time.deltaTime);
+            _anim?.SetBool(paramIsRun, false);
+            return;
+        }
+
         float h         = Input.GetAxisRaw("Horizontal");
         float v         = Input.GetAxisRaw("Vertical");
         if (Input.GetKeyDown(KeyCode.LeftShift)) _isRunning = !_isRunning;

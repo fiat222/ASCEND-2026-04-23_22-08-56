@@ -71,16 +71,20 @@ public class NetworkPlayerCombat : NetworkBehaviour
     [SerializeField] private string throwSpearParam = "Throw_Spear";
 
     // ── Private state ──────────────────────────────────────────────────────────
-    private Animator     _anim;
-    private PlayerStats  _playerStats;
+    private Animator              _anim;
+    private PlayerStats           _playerStats;
+    private NetworkPlayerMovement _movement;
 
     private GameObject   _equippedWeapon;
     private WeaponSO     _equippedSO;
     private DrakkarTrail _weaponTrail;
     private WeaponHitbox _hitbox;
+    private StaffSpell   _staffSpell;
 
     private GameObject   _equippedOffHand;
     private WeaponSO     _offHandSO;
+
+    public bool IsStaffCharging => _isStaffCharging;
 
     private bool _isAttacking;
     private bool _isStaffCharging;
@@ -103,6 +107,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
     {
         _anim        = GetComponentInChildren<Animator>();
         _playerStats = GetComponent<PlayerStats>();
+        _movement    = GetComponent<NetworkPlayerMovement>();
 
         if (_playerStats != null) _playerStats.OnGuardBreak += HandleGuardBreak;
     }
@@ -111,13 +116,34 @@ public class NetworkPlayerCombat : NetworkBehaviour
     {
         if (asServer || !isOwner) return;
 
-        if (hotbar == null) hotbar = FindObjectOfType<HotbarController>();
+        // Try NetworkInventory first (network scene)
+        var netInv = GetComponent<NetworkInventory>();
+        if (netInv != null)
+        {
+            netInv.OnEquippedChanged += (main, offhand) =>
+            {
+                EquipWeapon(main);
+                EquipOffHand(offhand);
+            };
+            return;
+        }
 
+        // Fallback: standalone hotbar (dev scene)
+        if (hotbar == null) hotbar = FindObjectOfType<HotbarController>();
         if (hotbar != null)
         {
-            hotbar.OnSlotChanged    += _ => EquipWeapon(hotbar.SelectedWeapon);
-            hotbar.OnOffHandChanged += EquipOffHand;
+            hotbar.OnSlotChanged += (slotIdx) =>
+            {
+                EquipWeapon(hotbar.SelectedWeapon);
+                SyncEquipRpc(slotIdx);
+            };
+            hotbar.OnOffHandChanged += (so) =>
+            {
+                EquipOffHand(so);
+                SyncOffHandRpc(so != null ? hotbar.IndexOf(so) : -1);
+            };
             EquipWeapon(hotbar.SelectedWeapon);
+            SyncEquipRpc(hotbar.SelectedIndex);
         }
     }
 
@@ -132,11 +158,22 @@ public class NetworkPlayerCombat : NetworkBehaviour
     {
         if (!isOwner || _equippedSO == null) return;
 
-        if (_isStaffCharging && Input.GetMouseButtonUp(1))
+        if (_isStaffCharging)
         {
-            _isStaffCharging = false;
-            StartCoroutine(StaffSkillRoutine());
-            return;
+            if (_movement?.IsDashing == true)
+            {
+                _isStaffCharging = false;
+                _staffSpell?.CancelCast();
+                SetInAction(false);
+                RestoreIdle();
+                return;
+            }
+            if (Input.GetMouseButtonUp(1))
+            {
+                _isStaffCharging = false;
+                StartCoroutine(StaffSkillRoutine());
+                return;
+            }
         }
 
         if (HasShieldOffHand && _equippedSO.weaponType == WeaponType.OneHand)
@@ -514,7 +551,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
             _isStaffCharging = true;
             SetInAction(true);
             ClearAllIdle();
-            GetComponent<StaffSpell>()?.BeginCast();
+            _staffSpell?.BeginCast();
         }
 
         if (Input.GetMouseButtonDown(0) && !_isStaffCharging)
@@ -704,12 +741,14 @@ public class NetworkPlayerCombat : NetworkBehaviour
     {
         if (!isOwner || _equippedSO?.projectilePrefab == null || shotPoint == null) return;
         Vector3 dir = (GetCrosshairTarget() - shotPoint.position).normalized;
-        GameObject arrow = Instantiate(_equippedSO.projectilePrefab, shotPoint.position, Quaternion.LookRotation(dir));
+        Quaternion rot = Quaternion.LookRotation(dir);
+        GameObject arrow = Instantiate(_equippedSO.projectilePrefab, shotPoint.position, rot);
         if (arrow.TryGetComponent<ProjectilePrefab>(out var proj))
         {
             proj.Setup(_playerStats, _equippedSO);
             proj.Launch(dir, _equippedSO.projectileForce);
         }
+        SyncProjectileRpc(hotbar?.SelectedIndex ?? -1, shotPoint.position, rot, 1);
     }
 
     public void ExecuteMagicBall()
@@ -718,16 +757,32 @@ public class NetworkPlayerCombat : NetworkBehaviour
         if (_playerStats != null && !_playerStats.DrainMana(_equippedSO.manaCost)) return;
 
         Vector3 dir = (GetCrosshairTarget() - magicPoint.position).normalized;
-        GameObject ball = Instantiate(_equippedSO.projectilePrefab, magicPoint.position, Quaternion.LookRotation(dir));
+        Quaternion rot = Quaternion.LookRotation(dir);
+        GameObject ball = Instantiate(_equippedSO.projectilePrefab, magicPoint.position, rot);
         if (ball.TryGetComponent<MagicBallDamage>(out var dmg))
         {
             dmg.speed    = _equippedSO.projectileSpeed;
             dmg.maxRange = _equippedSO.projectileRange;
             dmg.Setup(_playerStats, _equippedSO);
         }
+        SyncProjectileRpc(hotbar?.SelectedIndex ?? -1, magicPoint.position, rot, 0);
     }
 
-    public void OnStaffImpact() { if (isOwner) GetComponentInChildren<StaffSpell>()?.Cast(); }
+    public void OnStaffImpact()
+    {
+        if (!isOwner) return;
+        _playerStats?.DrainMana(_equippedSO?.manaCost ?? 0f);
+        _staffSpell?.Cast();
+    }
+
+    public void OnStaffSkillEnd()
+    {
+        if (!isOwner) return;
+        StopAllCoroutines();
+        _isAttacking = false;
+        SetInAction(false);
+        RestoreIdle();
+    }
 
     public void OnWandFireStart() { if (isOwner && _isWandHolding) GetComponentInChildren<WandLaser>()?.StartFire(); }
 
@@ -736,12 +791,14 @@ public class NetworkPlayerCombat : NetworkBehaviour
         if (!isOwner || _equippedSO == null || throwPoint == null) return;
         GameObject prefabToThrow = _equippedSO.projectilePrefab != null ? _equippedSO.projectilePrefab : _equippedSO.prefab;
         Vector3 dir = (GetCrosshairTarget() - throwPoint.position).normalized;
-        GameObject spear = Instantiate(prefabToThrow, throwPoint.position, Quaternion.LookRotation(dir));
+        Quaternion rot = Quaternion.LookRotation(dir);
+        GameObject spear = Instantiate(prefabToThrow, throwPoint.position, rot);
         if (spear.TryGetComponent<ProjectilePrefab>(out var proj))
         {
             proj.Setup(_playerStats, _equippedSO);
             proj.Launch(dir, _equippedSO.projectileForce);
         }
+        SyncProjectileRpc(hotbar?.SelectedIndex ?? -1, throwPoint.position, rot, 2);
         StartCoroutine(HideWeaponInHand());
     }
 
@@ -816,6 +873,9 @@ public class NetworkPlayerCombat : NetworkBehaviour
             var mp = _equippedWeapon.transform.Find("MagicPoint");
             if (mp != null) magicPoint = mp;
         }
+
+        _staffSpell = so.weaponType == WeaponType.Staff
+            ? _equippedWeapon.GetComponentInChildren<StaffSpell>() : null;
     }
 
     // ── Equip off hand ─────────────────────────────────────────────────────────
@@ -859,6 +919,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
     private void InterruptUpperOnly()
     {
         StopAllCoroutines();
+        _staffSpell?.CancelCast();
         _isAttacking = _isHoldingSpear = _isStaffCharging = _isWandHolding = false;
         _is1HBlocking = _is2HBlocking = _isShieldBlocking = _isShieldSwordBlocking = false;
         _canCounter2H = false;
@@ -896,4 +957,98 @@ public class NetworkPlayerCombat : NetworkBehaviour
 
     [ObserversRpc(excludeOwner: true)]
     private void SyncBoolObserversRpc(string param, bool val) => _anim?.SetBool(param, val);
+
+    // ── Weapon equip sync ──────────────────────────────────────────────────────
+
+    [ServerRpc]
+    private void SyncEquipRpc(int slotIdx) => SyncEquipObserversRpc(slotIdx);
+
+    [ObserversRpc(excludeOwner: true)]
+    private void SyncEquipObserversRpc(int slotIdx)
+    {
+        var localHotbar = FindObjectOfType<HotbarController>();
+        WeaponSO so = localHotbar?.GetWeaponAt(slotIdx);
+        EquipWeaponForObserver(so);
+    }
+
+    private void EquipWeaponForObserver(WeaponSO so)
+    {
+        if (_equippedWeapon != null) Destroy(_equippedWeapon);
+        _equippedSO = so;
+        ClearAllIdle();
+        if (so != null)
+        {
+            _anim.SetBool(idle1HParam,     so.weaponType is WeaponType.OneHand or WeaponType.Torch or WeaponType.Staff or WeaponType.Wand);
+            _anim.SetBool(idle2HParam,     so.weaponType == WeaponType.TwoHand);
+            _anim.SetBool(idleSpearParam,  so.weaponType == WeaponType.Spear);
+            _anim.SetBool(idleBowParam,    so.weaponType == WeaponType.Bow);
+            _anim.SetBool(idleShieldParam, so.weaponType == WeaponType.Shield);
+        }
+        if (so == null || so.prefab == null) return;
+        Transform slot = (so.useOffHand && offHandSlot != null) ? offHandSlot : weaponSlot;
+        _equippedWeapon = Instantiate(so.prefab, slot);
+        _equippedWeapon.transform.localPosition    = so.gripPositionOffset;
+        _equippedWeapon.transform.localEulerAngles = so.gripRotationOffset;
+        var rb = _equippedWeapon.GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+        _weaponTrail = _equippedWeapon.GetComponentInChildren<DrakkarTrail>();
+    }
+
+    [ServerRpc]
+    private void SyncOffHandRpc(int slotIdx) => SyncOffHandObserversRpc(slotIdx);
+
+    [ObserversRpc(excludeOwner: true)]
+    private void SyncOffHandObserversRpc(int slotIdx)
+    {
+        var localHotbar = FindObjectOfType<HotbarController>();
+        WeaponSO so = slotIdx >= 0 ? localHotbar?.GetWeaponAt(slotIdx) : null;
+        if (_equippedOffHand != null) { Destroy(_equippedOffHand); _equippedOffHand = null; }
+        _offHandSO = so;
+        if (so == null || so.prefab == null || offHandSlot == null) return;
+        _equippedOffHand = Instantiate(so.prefab, offHandSlot);
+        _equippedOffHand.transform.localPosition    = so.offHandPositionOffset;
+        _equippedOffHand.transform.localEulerAngles = so.offHandRotationOffset;
+        var rb = _equippedOffHand.GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+    }
+
+    // ── Projectile visual sync ─────────────────────────────────────────────────
+    // type: 0=MagicBall, 1=Arrow, 2=SpearThrow
+
+    [ServerRpc]
+    private void SyncProjectileRpc(int slotIdx, Vector3 pos, Quaternion rot, int type)
+        => SyncProjectileObserversRpc(slotIdx, pos, rot, type);
+
+    [ObserversRpc(excludeOwner: true)]
+    private void SyncProjectileObserversRpc(int slotIdx, Vector3 pos, Quaternion rot, int type)
+    {
+        var localHotbar = FindObjectOfType<HotbarController>();
+        WeaponSO so = localHotbar?.GetWeaponAt(slotIdx);
+        if (so == null) return;
+
+        GameObject prefab = type == 2
+            ? (so.projectilePrefab != null ? so.projectilePrefab : so.prefab)
+            : so.projectilePrefab;
+        if (prefab == null) return;
+
+        GameObject obj = Instantiate(prefab, pos, rot);
+
+        if (type == 0)
+        {
+            if (obj.TryGetComponent<MagicBallDamage>(out var ball))
+            {
+                ball.visualOnly = true;
+                ball.speed      = so.projectileSpeed;
+                ball.maxRange   = so.projectileRange;
+            }
+        }
+        else
+        {
+            if (obj.TryGetComponent<ProjectilePrefab>(out var proj))
+            {
+                proj.visualOnly = true;
+                proj.Launch(rot * Vector3.forward, so.projectileForce);
+            }
+        }
+    }
 }

@@ -36,19 +36,23 @@ public class NetworkPlayerMovement : NetworkBehaviour
 
     public bool IsDashing => _isDashing;
 
-    private CharacterController _cc;
-    private Animator            _anim;
-    private float               _verticalVel;
-    private bool                _isDashing;
-    private float               _dashTimer;
-    private float               _dashCooldownTimer;
-    private Vector3             _dashDir;
-    private bool                _isRunning;
+    private CharacterController   _cc;
+    private Animator              _anim;
+    private NetworkPlayerCombat   _combat;
+    private NetworkInventory      _netInv;
+    private float                 _verticalVel;
+    private bool                  _isDashing;
+    private float                 _dashTimer;
+    private float                 _dashCooldownTimer;
+    private Vector3               _dashDir;
+    private bool                  _isRunning;
 
     protected override void OnSpawned()
     {
-        _cc   = GetComponent<CharacterController>();
-        _anim = playerVisual != null
+        _cc     = GetComponent<CharacterController>();
+        _combat = GetComponent<NetworkPlayerCombat>();
+        _netInv = GetComponent<NetworkInventory>();
+        _anim   = playerVisual != null
             ? playerVisual.GetComponentInChildren<Animator>(true)
             : GetComponentInChildren<Animator>(true);
     }
@@ -92,6 +96,17 @@ public class NetworkPlayerMovement : NetworkBehaviour
 
     private void HandleMovement()
     {
+        if (_combat != null && _combat.IsStaffCharging)
+        {
+            _verticalVel += gravity * Time.deltaTime;
+            if (_cc.isGrounded && _verticalVel < 0f) _verticalVel = -2f;
+            _cc.Move(new Vector3(0f, _verticalVel, 0f) * Time.deltaTime);
+            _anim?.SetFloat(paramMoveX, 0f, 0.1f, Time.deltaTime);
+            _anim?.SetFloat(paramMoveY, 0f, 0.1f, Time.deltaTime);
+            _anim?.SetBool(paramIsRun, false);
+            return;
+        }
+
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
 
@@ -138,7 +153,8 @@ public class NetworkPlayerMovement : NetworkBehaviour
 
         _verticalVel += gravity * Time.deltaTime;
 
-        float   speed    = _isRunning ? runSpeed : walkSpeed;
+        float speed = _isRunning ? runSpeed : walkSpeed;
+        speed *= WeightSpeedMultiplier();
         Vector3 velocity = moveDir * speed;
         velocity.y = _verticalVel;
 
@@ -177,4 +193,13 @@ public class NetworkPlayerMovement : NetworkBehaviour
 
     [ObserversRpc(excludeOwner: true)]
     private void SyncJumpObserversRpc() => _anim?.SetTrigger(paramJump);
+
+    private float WeightSpeedMultiplier()
+    {
+        if (_netInv == null || !isOwner) return 1f;
+        float ratio = _netInv.WeightRatio;
+        if (ratio <= 0.7f) return 1f;
+        float excess = ratio - 0.7f; // 0..0.3
+        return Mathf.Max(0.4f, 1f - excess * 2f);
+    }
 }

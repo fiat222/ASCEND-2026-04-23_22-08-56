@@ -10,6 +10,7 @@ public class ProjectilePrefab : MonoBehaviour
     [Header("Rotation Fix")]
     [Tooltip("90 if model points UP (Y-axis). 0 if model points FORWARD (Z-axis).")]
     public float rotationOffsetX = 90f;
+    public bool  visualOnly = false;
 
     private Rigidbody  _rb;
     private bool       _stuck;
@@ -53,13 +54,16 @@ public class ProjectilePrefab : MonoBehaviour
 
         if (col.gameObject.CompareTag("Enemy"))
         {
-            var target = col.gameObject.GetComponent<IDamageable>()
-                      ?? col.gameObject.GetComponentInParent<IDamageable>();
-            if (target != null)
+            if (!visualOnly)
             {
-                float dmg = _owner != null ? _owner.RawDamage(_weapon)
-                          : (_weapon != null ? _weapon.damage : damage);
-                target.TakeDamage(dmg);
+                var target = col.gameObject.GetComponent<IDamageable>()
+                          ?? col.gameObject.GetComponentInParent<IDamageable>();
+                if (target != null)
+                {
+                    float dmg = _owner != null ? _owner.RawDamage(_weapon)
+                              : (_weapon != null ? _weapon.damage : damage);
+                    target.TakeDamage(dmg);
+                }
             }
             Destroy(gameObject);
             return;

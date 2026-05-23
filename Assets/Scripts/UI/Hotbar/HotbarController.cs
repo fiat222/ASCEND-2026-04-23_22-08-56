@@ -5,32 +5,73 @@ using UnityEngine.UI;
 
 public class HotbarController : MonoBehaviour
 {
+    // ── Standalone mode (dev / local scene) ───────────────────────
+    [Header("Standalone Weapons (dev scene only — leave empty in network scene)")]
     [SerializeField] private List<WeaponSO> weapons = new();
 
-    [Header("UI — assign 9 slot Image components")]
-    [SerializeField] private Image[] slotIcons      = new Image[9];
+    [Header("UI")]
+    [SerializeField] private Image[]      slotIcons      = new Image[9];
     [SerializeField] private GameObject[] slotHighlights = new GameObject[9];
 
     [Header("Off-hand Slot UI")]
-    [SerializeField] private Image       offHandIcon;       // icon ของ slot มือซ้าย
-    [SerializeField] private GameObject  offHandHighlight;  // frame/highlight ของ slot นั้น
+    [SerializeField] private Image      offHandIcon;
+    [SerializeField] private GameObject offHandHighlight;
 
-    // ─── Events ───────────────────────────────────────────────
+    // ── Runtime state ─────────────────────────────────────────────
+    private NetworkInventory _netInventory;
+    private bool             UseInventory => _netInventory != null;
+
+    // ── Events ─────────────────────────────────────────────────────
     public event Action<int>      OnSlotChanged;
-    /// <summary>
-    /// เรียกเมื่อ off-hand เปลี่ยน (null = ถอดออก / disable)
-    /// </summary>
     public event Action<WeaponSO> OnOffHandChanged;
 
-    // ─── Public State ─────────────────────────────────────────
-    public int      SelectedIndex  { get; private set; } = 0;
-    public WeaponSO SelectedWeapon => (weapons.Count > 0 && SelectedIndex < weapons.Count)
-                                        ? weapons[SelectedIndex] : null;
-    public int      SlotCount      => weapons.Count;
+    // ── Public state ──────────────────────────────────────────────
+    public int SelectedIndex { get; private set; } = 0;
 
-    public WeaponSO OffHandWeapon  { get; private set; }
+    public WeaponSO SelectedWeapon => UseInventory
+        ? _netInventory.EquippedWeapon
+        : (SelectedIndex < weapons.Count ? weapons[SelectedIndex] : null);
 
-    // ─── Unity ────────────────────────────────────────────────
+    public WeaponSO OffHandWeapon => UseInventory
+        ? _netInventory.OffHandWeapon
+        : _standaloneOffHand;
+
+    public int SlotCount => UseInventory ? (_netInventory.HotbarItems?.Length ?? 0) : weapons.Count;
+
+    // Legacy helpers (used by NetworkPlayerCombat / PlayerCombat subscriber)
+    public WeaponSO GetWeaponAt(int index) => UseInventory
+        ? (_netInventory.HotbarItems != null && index < _netInventory.HotbarItems.Length
+            ? _netInventory.HotbarItems[index] as WeaponSO : null)
+        : (index >= 0 && index < weapons.Count ? weapons[index] : null);
+
+    public int IndexOf(WeaponSO so) => UseInventory
+        ? Array.IndexOf(_netInventory.HotbarItems, so)
+        : weapons.IndexOf(so);
+
+    private WeaponSO _standaloneOffHand;
+
+    // ── Connect (called by NetworkPlayerStats.OnSpawned for owner) ─
+    public void ConnectInventory(NetworkInventory inv)
+    {
+        if (_netInventory != null)
+        {
+            _netInventory.OnHotbarChanged -= RefreshUI;
+            _netInventory.OnHotbarChanged -= FireSlotChanged;
+        }
+
+        _netInventory = inv;
+
+        if (inv != null)
+        {
+            inv.OnHotbarChanged += RefreshUI;
+            inv.OnHotbarChanged += FireSlotChanged;
+        }
+
+        RefreshUI();
+    }
+
+    // ── Unity ────────────────────────────────────────────────────
+
     private void Start()
     {
         RefreshUI();
@@ -40,104 +81,82 @@ public class HotbarController : MonoBehaviour
 
     private void Update()
     {
+        if (UseInventory) return; // NetworkInventory handles input
+
         HandleScroll();
         HandleNumberKeys();
         HandleOffHandKey();
     }
 
-    // ─── Input ────────────────────────────────────────────────
+    // ── Standalone input (dev scene) ─────────────────────────────
+
     private void HandleScroll()
     {
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll == 0f || weapons.Count == 0) return;
-
-        int dir = scroll > 0f ? -1 : 1;
-        SelectSlot((SelectedIndex + dir + weapons.Count) % weapons.Count);
+        SelectSlotStandalone((SelectedIndex + (scroll > 0f ? -1 : 1) + weapons.Count) % weapons.Count);
     }
 
     private void HandleNumberKeys()
     {
         for (int i = 0; i < 9; i++)
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
-            {
-                SelectSlot(i);
-                return;
-            }
-        }
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i)) { SelectSlotStandalone(i); return; }
     }
 
-    /// <summary>
-    /// กด L → ถ้า slot ปัจจุบัน equip off-hand ได้ → ย้ายไป off-hand slot
-    ///         ถ้า slot ปัจจุบันคือ off-hand ที่ใส่อยู่แล้ว → ถอดออก
-    /// </summary>
     private void HandleOffHandKey()
     {
         if (!Input.GetKeyDown(KeyCode.L)) return;
-
         WeaponSO current = SelectedWeapon;
-
-        // กด L บน slot ที่ไม่มีอาวุธ → ไม่ทำอะไร
         if (current == null) return;
 
-        // กด L บนอาวุธที่อยู่ใน off-hand อยู่แล้ว → ถอดออก
-        if (current == OffHandWeapon)
-        {
-            SetOffHand(null);
-            return;
-        }
-
-        // เช็คว่า equip off-hand ได้ไหม (Shield หรือ 1H เท่านั้น)
-        if (!current.CanEquipOffHand)
-        {
-            Debug.Log($"[Hotbar] '{current.weaponName}' ไม่สามารถใส่มือซ้ายได้");
-            return;
-        }
-
-        SetOffHand(current);
+        if (current == _standaloneOffHand) { SetStandaloneOffHand(null); return; }
+        if (!current.CanEquipOffHand) return;
+        SetStandaloneOffHand(current);
     }
 
-    // ─── Slot Selection ───────────────────────────────────────
-    private void SelectSlot(int index)
+    private void SelectSlotStandalone(int index)
     {
         if (index == SelectedIndex) return;
-
         SelectedIndex = index;
         SetHighlight(index);
         OnSlotChanged?.Invoke(SelectedIndex);
-
-        // Off-hand slot stays — PlayerCombat handles hide/show based on weapon type
     }
 
-    // ─── Off-Hand ─────────────────────────────────────────────
-    private void SetOffHand(WeaponSO so)
+    private void SetStandaloneOffHand(WeaponSO so)
     {
-        OffHandWeapon = so;
+        _standaloneOffHand = so;
         RefreshOffHandUI();
-        OnOffHandChanged?.Invoke(OffHandWeapon);
+        OnOffHandChanged?.Invoke(so);
     }
 
-    /// <summary>
-    /// เรียกจากภายนอก (เช่น PlayerCombat) เพื่อ force disable off-hand
-    /// เมื่อเปลี่ยนไปอาวุธที่ใช้สองมือ
-    /// </summary>
     public void DisableOffHand()
     {
-        if (OffHandWeapon != null)
-            SetOffHand(null);
+        if (!UseInventory && _standaloneOffHand != null) SetStandaloneOffHand(null);
     }
 
-    // ─── UI ───────────────────────────────────────────────────
+    // ── Inventory-mode helpers ────────────────────────────────────
+
+    private void FireSlotChanged()
+    {
+        if (!UseInventory) return;
+        SelectedIndex = _netInventory.SelectedIdx;
+        SetHighlight(SelectedIndex);
+        OnSlotChanged?.Invoke(SelectedIndex);
+        OnOffHandChanged?.Invoke(_netInventory.OffHandWeapon);
+    }
+
+    // ── UI refresh ────────────────────────────────────────────────
+
     private void RefreshUI()
     {
         for (int i = 0; i < 9; i++)
         {
             if (slotIcons[i] == null) continue;
-
-            WeaponSO weapon = (i < weapons.Count) ? weapons[i] : null;
+            WeaponSO weapon = GetWeaponAt(i);
             slotIcons[i].sprite  = weapon?.icon;
             slotIcons[i].enabled = weapon?.icon != null;
         }
+        RefreshOffHandUI();
     }
 
     private void RefreshOffHandUI()
@@ -147,7 +166,6 @@ public class HotbarController : MonoBehaviour
             offHandIcon.sprite  = OffHandWeapon?.icon;
             offHandIcon.enabled = OffHandWeapon?.icon != null;
         }
-
         if (offHandHighlight != null)
             offHandHighlight.SetActive(OffHandWeapon != null);
     }
@@ -155,9 +173,7 @@ public class HotbarController : MonoBehaviour
     private void SetHighlight(int selected)
     {
         for (int i = 0; i < slotHighlights.Length; i++)
-        {
             if (slotHighlights[i] != null)
                 slotHighlights[i].SetActive(i == selected);
-        }
     }
 }

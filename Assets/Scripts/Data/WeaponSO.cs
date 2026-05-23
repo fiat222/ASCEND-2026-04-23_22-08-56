@@ -6,13 +6,15 @@ public enum AttackType { OneHand, TwoHand, Magic, Shield, Spear, Bow, Torch }
 public enum ScalingGrade { None, E, D, C, B, A, S }
 
 [CreateAssetMenu(fileName = "NewWeapon", menuName = "ASCEND/Weapon")]
-public class WeaponSO : ScriptableObject
+public class WeaponSO : ItemSO
 {
     public string     weaponName;
     public WeaponType weaponType;
     public int        damage;
     public GameObject prefab;
-    public Sprite     icon;
+    // icon is inherited from ItemSO
+
+    public override string DisplayName => weaponName;
 
     [Header("Grip")]
     public Vector3 gripPositionOffset;
