@@ -24,4 +24,21 @@ public class NetworkEnemyStats : NetworkBehaviour, IDamageable
 
     [ObserversRpc(excludeOwner: true)]
     private void SyncHpRpc(float hp) => _stats.SyncHp(hp);
+
+    // ── IDamageable ──────────────────────────────────────────────────────────
+
+    public void TakeStagger(float staggerDmg)
+    {
+        // Stagger is server-authoritative, run on server
+        if (isServer) ApplyStagger(staggerDmg);
+        else          CmdTakeStagger(staggerDmg);
+    }
+
+    [ServerRpc(requireOwnership: false)]
+    private void CmdTakeStagger(float staggerDmg) => ApplyStagger(staggerDmg);
+
+    private void ApplyStagger(float staggerDmg)
+    {
+        _stats.TakeStagger(staggerDmg);
+    }
 }

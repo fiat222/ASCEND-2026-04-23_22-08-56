@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78f498f7357554243bf214036d1ec40c, type: 3}
+  m_Name: WarriorStatConfig
+  m_EditorClassIdentifier: 
+  className: Warrior
+  baseVIT: 10
+  baseEND: 10
+  baseAGI: 10
+  baseSTR: 10
+  baseDEX: 10
+  baseARC: 10
+  vitProgressBase: 50
+  vitProgressBonus: 150
+  vitProgressK: 0.05
+  endProgressBase: 50
+  endProgressBonus: 150
+  endProgressK: 0.05
+  agiProgressBase: 50
+  agiProgressBonus: 150
+  agiProgressK: 0.05
+  strProgressBase: 50
+  strProgressBonus: 150
+  strProgressK: 0.05
+  dexProgressBase: 50
+  dexProgressBonus: 150
+  dexProgressK: 0.05
+  arcProgressBase: 50
+  arcProgressBonus: 150
+  arcProgressK: 0.05
