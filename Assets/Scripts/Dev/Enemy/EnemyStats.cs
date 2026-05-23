@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using ASCEND.Systems;
 
 public class EnemyStats : MonoBehaviour, IDamageable
 {
@@ -31,9 +32,16 @@ public class EnemyStats : MonoBehaviour, IDamageable
     [SerializeField] private float interruptAccum;
     [SerializeField] private float stunAccum;
 
+    [Header("Status Effects")]
+    [SerializeField] private StatusEffectHandler statusHandler;
+
     public bool  IsAlive   => currentHp > 0f;
     public float CurrentHp => currentHp;
     public float MaxHp     => maxHp;
+    public float StatusResistance => _statusResistance;
+
+    [Header("Status Resistance")]
+    [SerializeField] private float _statusResistance = 0f; // 0-100 range
 
     public event Action OnDied;
     public event Action OnHit;
@@ -76,6 +84,15 @@ public class EnemyStats : MonoBehaviour, IDamageable
         if (!IsAlive) return;
 
         float finalDmg = rawDamage * (100f / (100f + def)) * _activeDamageBonus;
+
+        // Bleeding: add bonus damage if bleeding is active
+        if (statusHandler != null && statusHandler.IsBleedingActive)
+        {
+            float bonusDmg = maxHp * 0.03f;
+            finalDmg += bonusDmg;
+            Debug.Log($"[EnemyStats] TakeDamage: bleeding bonus +{bonusDmg:F1}");
+        }
+
         currentHp = Mathf.Max(0f, currentHp - finalDmg);
 
         RefreshSlider();
@@ -89,9 +106,17 @@ public class EnemyStats : MonoBehaviour, IDamageable
     {
         if (!IsAlive) return;
 
-        Debug.Log($"[EnemyStats] TakeStagger: {staggerDmg:F1} (Interrupt: {interruptAccum:F1}/{_currentInterruptThreshold:F1}, Stun: {stunAccum:F1}/{_currentStunThreshold:F1})");
+        // Freezing: multiply stagger damage if frozen
+        float finalStaggerDmg = staggerDmg;
+        if (statusHandler != null && statusHandler.IsFrozen)
+        {
+            finalStaggerDmg *= 1.5f;
+            Debug.Log($"[EnemyStats] TakeStagger: freezing multiplier → {finalStaggerDmg:F1}");
+        }
 
-        AccumulateStagger(staggerDmg);
+        Debug.Log($"[EnemyStats] TakeStagger: {finalStaggerDmg:F1} (Interrupt: {interruptAccum:F1}/{_currentInterruptThreshold:F1}, Stun: {stunAccum:F1}/{_currentStunThreshold:F1})");
+
+        AccumulateStagger(finalStaggerDmg);
     }
 
     // ── Stagger logic ──────────────────────────────────────────────────────────
@@ -160,6 +185,24 @@ public class EnemyStats : MonoBehaviour, IDamageable
 
     public bool IsInterrupted => _isInterrupted;
     public bool IsStunned     => _isStunned;
+
+    // Status effect accessors
+    public bool IsBleedingActive => statusHandler != null && statusHandler.IsBleedingActive;
+    public bool IsPoisoned => statusHandler != null && statusHandler.IsPoisoned;
+    public bool IsFrozen => statusHandler != null && statusHandler.IsFrozen;
+
+    public void Heal(float amount)
+    {
+        if (statusHandler != null && statusHandler.IsPoisoned)
+        {
+            Debug.Log("[EnemyStats] Heal blocked: poisoned");
+            return; // Poison blocks healing
+        }
+
+        currentHp = Mathf.Min(maxHp, currentHp + amount);
+        RefreshSlider();
+        OnHit?.Invoke();
+    }
 
     // Called on non-server clients by NetworkEnemyStats to sync host's result
     public void SyncHp(float hp)

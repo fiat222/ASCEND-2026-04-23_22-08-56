@@ -1,7 +1,8 @@
 # Status Effect System Design
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Created**: 2026-05-23
+**Last Updated**: 2026-05-23
 **Project**: ASCEND - Survival Permadeath RPG
 
 ---
@@ -169,12 +170,16 @@ public class StatusEffectHandler : MonoBehaviour
     public StatusBar poison = new StatusBar();
     public StatusBar freezing = new StatusBar();
 
+    // Events use StatusEffectType (not CoreStatType)
+    public event Action<StatusEffectType> OnStatusTriggered;
+    public event Action<StatusEffectType> OnStatusEnded;
+
     // Called by WeaponHitbox on hit
     public void ApplyStatusHit(WeaponSO weapon, float statusResistancePercent);
 
     // Internal
-    private void TriggerStatus(StatusBar bar, StatusEffectSO data);
-    private void EndStatus(StatusBar bar);
+    private void TriggerStatus(StatusBar bar, StatusEffectSO data, StatusEffectType effectType);
+    private void EndStatus(StatusBar bar, StatusEffectType effectType);
     private void Update(); // ticks duration countdown
 }
 ```
@@ -252,15 +257,26 @@ War Hammer:
 ### 4.4 `WeaponHitbox` Changes
 
 ```csharp
-private void OnTriggerHit(IDamageable target, WeaponSO weapon)
+private void OnTriggerEnter(Collider other)
 {
-    // Existing
-    target.TakeDamage(finalDamage);
-    target.TakeStagger(staggerDmg);
+    // ... existing damage/stagger logic ...
 
-    // New — apply status effects
-    if (target.TryGetComponent<StatusEffectHandler>(out var handler))
-        handler.ApplyStatusHit(weapon, GetTargetStatusResistance(target));
+    // Apply status effects (use collider's GameObject directly)
+    var handler = other.GetComponent<StatusEffectHandler>();
+    if (handler != null)
+    {
+        float statusResistance = GetTargetStatusResistance(other.gameObject);
+        handler.ApplyStatusHit(_weapon, statusResistance);
+    }
+}
+
+private float GetTargetStatusResistance(GameObject targetGo)
+{
+    if (targetGo.TryGetComponent<PlayerStats>(out var ps))
+        return ps.StatusResistance;
+    if (targetGo.TryGetComponent<EnemyStats>(out var es))
+        return es.StatusResistance;
+    return 0f;
 }
 ```
 
@@ -305,4 +321,21 @@ Both Player and Enemy have StatusResistance derived stat that reduces status dam
 
 ---
 
-**Status**: Design approved — pending implementation
+**Status**: Design approved — implemented (2026-05-23)
+
+---
+
+## Appendix: Enum Architecture
+
+Status effects use a **separate enum** from core stats to maintain clean separation:
+
+```
+CoreStatType { VIT, END, AGI, STR, DEX, ARC }         ← stats only
+StatusEffectType { Bleeding, Poison, Freezing }       ← status effects only
+```
+
+**Files:**
+- `CoreStatType.cs` — pure stats enum
+- `StatusEffectType.cs` — separate enum for status effect type identification
+
+This ensures status effects are never confused with character stats in systems like `IStatable`, `CentralizedStatSystem.RecalculateDerived()`, and event callbacks.

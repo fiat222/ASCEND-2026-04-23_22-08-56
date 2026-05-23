@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ASCEND.Systems;
 
 [RequireComponent(typeof(Collider))]
 public class WeaponHitbox : MonoBehaviour
@@ -77,5 +78,22 @@ public class WeaponHitbox : MonoBehaviour
 
         Debug.Log($"[WeaponHitbox] Applying {staggerDmg} stagger to {other.gameObject.name}");
         target.TakeStagger(staggerDmg);
+
+        // Apply status effects (use 'other' GameObject — target is IDamageable interface, not Component)
+        var handler = other.GetComponent<StatusEffectHandler>();
+        if (handler != null)
+        {
+            float statusResistance = GetTargetStatusResistance(other.gameObject);
+            handler.ApplyStatusHit(_weapon, statusResistance);
+        }
+    }
+
+    private float GetTargetStatusResistance(GameObject targetGo)
+    {
+        if (targetGo.TryGetComponent<PlayerStats>(out var playerStats))
+            return playerStats.StatusResistance;
+        if (targetGo.TryGetComponent<EnemyStats>(out var enemyStats))
+            return enemyStats.StatusResistance;
+        return 0f;
     }
 }

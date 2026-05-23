@@ -26,6 +26,9 @@ public class PlayerStats : MonoBehaviour, IDamageable, IStatable
     [Header("Runtime — Mana")]
     [SerializeField] private float currentMana;
 
+    [Header("Status Effects")]
+    [SerializeField] private StatusEffectHandler statusHandler;
+
     private float _guardStabilityBase;
 
     // ── Per-stat progress ──────────────────────────────────────────────────────
@@ -127,9 +130,17 @@ public class PlayerStats : MonoBehaviour, IDamageable, IStatable
 
     private void Update()
     {
+        float staminaRecoveryRate = StaminaRecovery;
+
+        // Freezing: reduce stamina recovery rate
+        if (statusHandler != null && statusHandler.IsFrozen)
+        {
+            staminaRecoveryRate *= 0.25f;
+        }
+
         if (!IsBlocking && currentStamina < MaxStamina)
         {
-            currentStamina = Mathf.Min(MaxStamina, currentStamina + StaminaRecovery * Time.deltaTime);
+            currentStamina = Mathf.Min(MaxStamina, currentStamina + staminaRecoveryRate * Time.deltaTime);
             OnStaminaChanged?.Invoke(currentStamina, MaxStamina);
         }
 
@@ -405,6 +416,14 @@ public class PlayerStats : MonoBehaviour, IDamageable, IStatable
             }
         }
 
+        // Bleeding: add bonus damage if bleeding is active
+        if (statusHandler != null && statusHandler.IsBleedingActive)
+        {
+            float bonusDmg = MaxHP * 0.03f;
+            finalDmg += bonusDmg;
+            Debug.Log($"[TakeDamage] Bleeding bonus: +{bonusDmg:F1}");
+        }
+
         currentHp = Mathf.Max(0f, currentHp - finalDmg);
         OnHpChanged?.Invoke(currentHp, MaxHP);
 
@@ -416,15 +435,34 @@ public class PlayerStats : MonoBehaviour, IDamageable, IStatable
 
     public void TakeStagger(float staggerDmg)
     {
+        // Freezing: multiply stagger damage if frozen (player has no stagger bar, but we log it)
+        float finalStaggerDmg = staggerDmg;
+        if (statusHandler != null && statusHandler.IsFrozen)
+        {
+            finalStaggerDmg *= 1.5f;
+            Debug.Log($"[PlayerStats] TakeStagger: freezing multiplier → {finalStaggerDmg:F1}");
+        }
+
         // Player doesn't have stagger system yet, just log
-        Debug.Log($"[PlayerStats] TakeStagger: {staggerDmg:F1} (player stagger not implemented)");
+        Debug.Log($"[PlayerStats] TakeStagger: {finalStaggerDmg:F1} (player stagger not implemented)");
     }
 
     public void Heal(float amount)
     {
+        if (statusHandler != null && statusHandler.IsPoisoned)
+        {
+            Debug.Log("[PlayerStats] Heal blocked: poisoned");
+            return; // Poison blocks healing
+        }
+
         currentHp = Mathf.Min(MaxHP, currentHp + amount);
         OnHpChanged?.Invoke(currentHp, MaxHP);
     }
+
+    // Status effect accessors
+    public bool IsBleedingActive => statusHandler != null && statusHandler.IsBleedingActive;
+    public bool IsPoisoned => statusHandler != null && statusHandler.IsPoisoned;
+    public bool IsFrozen => statusHandler != null && statusHandler.IsFrozen;
 
     // Called on non-server clients by NetworkPlayerStats to sync host's result
     public void SyncHp(float hp)

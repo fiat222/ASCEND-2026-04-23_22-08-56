@@ -55,6 +55,11 @@ public class WeaponSO : ScriptableObject
 
     public float StaggerScale => GradeToValue(staggerScaling);
 
+    [Header("Status Effects")]
+    public float bleedingDmg = 0f;
+    public float poisonDmg = 0f;
+    public float freezeDmg = 0f;
+
     private static float GradeToValue(ScalingGrade grade) => grade switch
     {
         ScalingGrade.S    => 1.00f,
