@@ -1,0 +1,20 @@
+FROM ghcr.io/oraios/serena:latest
+
+USER root
+
+# Install .NET 10 SDK (required for C# LSP MSBuild project loading)
+# Clean up SDK templates and docs to minimize size
+RUN wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh \
+    && chmod +x /tmp/dotnet-install.sh \
+    && /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet \
+    && ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet \
+    && rm /tmp/dotnet-install.sh \
+    && rm -rf /usr/share/dotnet/sdk/*/templates \
+    && rm -rf /usr/share/dotnet/sdk/*/docs \
+    && find /usr/share/dotnet -name "*.xml" -not -path "*/Roslyn/*" -delete
+
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV PATH="${PATH}:/usr/share/dotnet"
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV DOTNET_NOLOGO=1

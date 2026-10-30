@@ -78,8 +78,12 @@ public class NetworkPlayerMovement : NetworkBehaviour
     {
         if (!isOwner) return;
 
-        xAxis.Update(Time.deltaTime);
-        yAxis.Update(Time.deltaTime);
+        bool casting = _combat != null && _combat.IsStaffCasting;
+        if (!casting)
+        {
+            xAxis.Update(Time.deltaTime);
+            yAxis.Update(Time.deltaTime);
+        }
         HandleMovement();
     }
 
@@ -96,7 +100,7 @@ public class NetworkPlayerMovement : NetworkBehaviour
 
     private void HandleMovement()
     {
-        if (_combat != null && _combat.IsStaffCharging)
+        if (_combat != null && _combat.IsStaffCasting)
         {
             _verticalVel += gravity * Time.deltaTime;
             if (_cc.isGrounded && _verticalVel < 0f) _verticalVel = -2f;

@@ -94,6 +94,7 @@ public class PlayerCombat : MonoBehaviour
     // Combat flags
     private bool _isAttacking;
     private bool _isStaffCharging;
+    private bool _isStaffCasting;
     private bool _isWandHolding;
     private bool _is1HBlocking;
     private bool _is2HBlocking;
@@ -111,6 +112,7 @@ public class PlayerCombat : MonoBehaviour
     // ─── Helpers ──────────────────────────────────────────────
     private bool HasShieldOffHand => _offHandSO != null && _offHandSO.weaponType == WeaponType.Shield;
     public  bool IsStaffCharging  => _isStaffCharging;
+    public  bool IsStaffCasting   => _isStaffCasting;
 
     // ─── Unity ────────────────────────────────────────────────
     private void Start()
@@ -279,6 +281,7 @@ public class PlayerCombat : MonoBehaviour
     private IEnumerator StaffSkillRoutine()
     {
         _isAttacking = true;
+        _isStaffCasting = true;
         playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
         _anim.SetTrigger(skillStaffParam);
 
@@ -290,6 +293,7 @@ public class PlayerCombat : MonoBehaviour
         yield return new WaitForSeconds(state.length);
 
         _isAttacking = false;
+        _isStaffCasting = false;
         SetInAction(false);
         RestoreIdle();
     }
@@ -729,6 +733,7 @@ public class PlayerCombat : MonoBehaviour
     {
         StopAllCoroutines();
         _isAttacking = false;
+        _isStaffCasting = false;
         SetInAction(false);
         RestoreIdle();
     }
@@ -887,7 +892,7 @@ public class PlayerCombat : MonoBehaviour
     private void InterruptUpperOnly()
     {
         StopAllCoroutines();
-        _isAttacking = _isHoldingSpear = _isStaffCharging = false;
+        _isAttacking = _isHoldingSpear = _isStaffCharging = _isStaffCasting = false;
         _is1HBlocking = _is2HBlocking = _isShieldBlocking = false;
         _isShieldSwordBlocking = _isWandHolding = false;
         _canCounter2H = false;

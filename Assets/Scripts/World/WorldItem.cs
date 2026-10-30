@@ -8,9 +8,9 @@ public class WorldItem : NetworkBehaviour
     [Header("Config")]
     [SerializeField] private ItemDatabase database;
 
-    // Set by server before spawning
-    private int _itemDbIndex = -1;
-    private int _quantity    = 1;
+    // Set by server before spawning, or via Inspector for scene-placed items
+    [SerializeField] private int _itemDbIndex = 0;
+    [SerializeField] private int _quantity    = 1;
 
     // Static registry for server-side proximity lookup
     private static readonly List<WorldItem> _all = new();

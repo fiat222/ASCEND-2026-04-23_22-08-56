@@ -11,15 +11,31 @@ public class NetworkPlayerStats : NetworkBehaviour, IDamageable
     protected override void OnSpawned()
     {
         if (!isOwner) return;
+        ConnectUI();
+    }
+
+    protected override void OnOwnerChanged(PlayerID? oldOwner, PlayerID? newOwner, bool asServer)
+    {
+        if (asServer) return;
+        if (!isOwner) return;
+        ConnectUI();
+    }
+
+    private bool _uiConnected;
+    private void ConnectUI()
+    {
+        if (_uiConnected) return;
+        _uiConnected = true;
+
         FindObjectOfType<PlayerHUD>()?.ConnectStats(_ps);
-        FindObjectOfType<PlayerStatPanel>()?.ConnectStats(_ps);
+        FindObjectOfType<PlayerStatPanel>(true)?.ConnectStats(_ps);
         _ps.OnStatLevelUp += HandleStatLevelUp;
 
         var inv = GetComponent<NetworkInventory>();
         if (inv != null)
         {
             FindObjectOfType<HotbarController>()?.ConnectInventory(inv);
-            FindObjectOfType<InventoryUI>()?.ConnectInventory(inv);
+            FindObjectOfType<InventoryUI>(true)?.ConnectInventory(inv);
         }
     }
 

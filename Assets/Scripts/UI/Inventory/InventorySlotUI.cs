@@ -23,9 +23,9 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 
         iconImage.sprite  = stack.item.icon;
         iconImage.enabled = stack.item.icon != null;
-        nameText.text     = stack.item.DisplayName;
-        qtyText.text      = stack.quantity > 1 ? $"x{stack.quantity}" : string.Empty;
-        weightText.text   = $"{stack.TotalWeight:F1} kg";
+        if (nameText   != null) nameText.text   = stack.item.DisplayName;
+        if (qtyText    != null) qtyText.text    = stack.quantity > 1 ? $"x{stack.quantity}" : string.Empty;
+        if (weightText != null) weightText.text = $"{stack.TotalWeight:F1} kg";
     }
 
     public void OnPointerClick(PointerEventData eventData)

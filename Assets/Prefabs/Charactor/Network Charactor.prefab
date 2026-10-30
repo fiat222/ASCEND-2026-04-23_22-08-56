@@ -2087,6 +2087,7 @@ GameObject:
   - component: {fileID: 5908625068007762915}
   - component: {fileID: 5367658752828592000}
   - component: {fileID: 8495752478076227172}
+  - component: {fileID: 1756905575832827552}
   m_Layer: 0
   m_Name: Network Charactor
   m_TagString: Player
@@ -2387,6 +2388,7 @@ MonoBehaviour:
   STR: 10
   DEX: 10
   ARC: 10
+  statConfig: {fileID: 0}
   currentHp: 0
   currentStamina: 0
   currentMana: 0
@@ -2406,6 +2408,32 @@ MonoBehaviour:
   ghostLifetime: 0.3
   ghostColor: {r: 0.509434, g: 0.509434, b: 0.509434, a: 0.11764706}
   ghostMaterial: {fileID: 2100000, guid: ee37421899b0e434fa53351bf47e08ba, type: 2}
+--- !u!114 &1756905575832827552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 683044934274976496}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7325910f14456514d8048686d404e2ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _isSetup: 0
+  _prefabId: -2147483648
+  _componentIndex: -2147483648
+  _shouldBePooled: 0
+  _parent: {fileID: 0}
+  _invertedPathToNearestParent: 
+  _directChildren: []
+  _networkRules: {fileID: 0}
+  _visitiblityRules: {fileID: 0}
+  database: {fileID: 11400000, guid: f43dc0aca96c32e478f282331eddcfd2, type: 2}
+  worldItemPrefab: {fileID: 3043239831135569110, guid: bdb2b1539fcbb5d4cab8a9665736edcb, type: 3}
+  maxCarryWeight: 60
+  pickupRadius: 2.5
+  hotbarSize: 9
 --- !u!1 &721044719981255916
 GameObject:
   m_ObjectHideFlags: 0

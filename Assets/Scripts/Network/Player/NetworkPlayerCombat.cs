@@ -85,9 +85,11 @@ public class NetworkPlayerCombat : NetworkBehaviour
     private WeaponSO     _offHandSO;
 
     public bool IsStaffCharging => _isStaffCharging;
+    public bool IsStaffCasting  => _isStaffCasting;
 
     private bool _isAttacking;
     private bool _isStaffCharging;
+    private bool _isStaffCasting;
     private bool _isWandHolding;
     private bool _is1HBlocking;
     private bool _is2HBlocking;
@@ -112,21 +114,27 @@ public class NetworkPlayerCombat : NetworkBehaviour
         if (_playerStats != null) _playerStats.OnGuardBreak += HandleGuardBreak;
     }
 
+    private bool _equippedChangedSubscribed;
+
     protected override void OnOwnerChanged(PlayerID? oldOwner, PlayerID? newOwner, bool asServer)
     {
-        if (asServer || !isOwner) return;
+        if (asServer) return;
 
-        // Try NetworkInventory first (network scene)
+        // ALL clients subscribe so observers see other players' weapons
         var netInv = GetComponent<NetworkInventory>();
-        if (netInv != null)
+        if (netInv != null && !_equippedChangedSubscribed)
         {
+            _equippedChangedSubscribed = true;
             netInv.OnEquippedChanged += (main, offhand) =>
             {
                 EquipWeapon(main);
                 EquipOffHand(offhand);
             };
-            return;
         }
+
+        if (!isOwner) return; // input wiring below is owner-only
+
+        if (netInv != null) return;
 
         // Fallback: standalone hotbar (dev scene)
         if (hotbar == null) hotbar = FindObjectOfType<HotbarController>();
@@ -208,7 +216,11 @@ public class NetworkPlayerCombat : NetworkBehaviour
 
     // ── Action lock ────────────────────────────────────────────────────────────
 
-    private void SetInAction(bool value) => _anim.SetBool(isInActionParam, value);
+    private void SetInAction(bool value)
+    {
+        _anim.SetBool(isInActionParam, value);
+        if (isOwner) SyncBoolRpc(isInActionParam, value);
+    }
 
     // ── Idle ───────────────────────────────────────────────────────────────────
 
@@ -219,6 +231,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
         _anim.SetBool(idleSpearParam, false);
         _anim.SetBool(idleBowParam,   false);
         _anim.SetBool(idleShieldParam,false);
+        if (isOwner) SyncClearIdleRpc();
     }
 
     private void RestoreIdle()
@@ -232,6 +245,41 @@ public class NetworkPlayerCombat : NetworkBehaviour
         _anim.SetBool(idleSpearParam,  _equippedSO.weaponType == WeaponType.Spear);
         _anim.SetBool(idleBowParam,    _equippedSO.weaponType == WeaponType.Bow);
         _anim.SetBool(idleShieldParam, _equippedSO.weaponType == WeaponType.Shield);
+        if (isOwner) SyncRestoreIdleRpc((int)_equippedSO.weaponType);
+    }
+
+    [ServerRpc]
+    private void SyncClearIdleRpc() => SyncClearIdleObserversRpc();
+
+    [ObserversRpc(excludeOwner: true)]
+    private void SyncClearIdleObserversRpc()
+    {
+        if (_anim == null) return;
+        _anim.SetBool(idle1HParam,    false);
+        _anim.SetBool(idle2HParam,    false);
+        _anim.SetBool(idleSpearParam, false);
+        _anim.SetBool(idleBowParam,   false);
+        _anim.SetBool(idleShieldParam,false);
+    }
+
+    [ServerRpc]
+    private void SyncRestoreIdleRpc(int weaponType) => SyncRestoreIdleObserversRpc(weaponType);
+
+    [ObserversRpc(excludeOwner: true)]
+    private void SyncRestoreIdleObserversRpc(int weaponType)
+    {
+        if (_anim == null) return;
+        _anim.SetBool(idle1HParam,    false);
+        _anim.SetBool(idle2HParam,    false);
+        _anim.SetBool(idleSpearParam, false);
+        _anim.SetBool(idleBowParam,   false);
+        _anim.SetBool(idleShieldParam,false);
+        var wt = (WeaponType)weaponType;
+        _anim.SetBool(idle1HParam,     wt is WeaponType.OneHand or WeaponType.Torch or WeaponType.Staff or WeaponType.Wand);
+        _anim.SetBool(idle2HParam,     wt == WeaponType.TwoHand);
+        _anim.SetBool(idleSpearParam,  wt == WeaponType.Spear);
+        _anim.SetBool(idleBowParam,    wt == WeaponType.Bow);
+        _anim.SetBool(idleShieldParam, wt == WeaponType.Shield);
     }
 
     // ── Attack ─────────────────────────────────────────────────────────────────
@@ -561,6 +609,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
     private IEnumerator StaffSkillRoutine()
     {
         _isAttacking = true;
+        _isStaffCasting = true;
         _playerStats?.DrainStamina(_equippedSO?.staminaCost ?? 10f);
         _anim.SetTrigger(skillStaffParam);
         SyncTriggerRpc(skillStaffParam);
@@ -573,6 +622,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
         yield return new WaitForSeconds(len);
 
         _isAttacking = false;
+        _isStaffCasting = false;
         SetInAction(false);
         RestoreIdle();
     }
@@ -780,6 +830,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
         if (!isOwner) return;
         StopAllCoroutines();
         _isAttacking = false;
+        _isStaffCasting = false;
         SetInAction(false);
         RestoreIdle();
     }
@@ -920,7 +971,7 @@ public class NetworkPlayerCombat : NetworkBehaviour
     {
         StopAllCoroutines();
         _staffSpell?.CancelCast();
-        _isAttacking = _isHoldingSpear = _isStaffCharging = _isWandHolding = false;
+        _isAttacking = _isHoldingSpear = _isStaffCharging = _isWandHolding = _isStaffCasting = false;
         _is1HBlocking = _is2HBlocking = _isShieldBlocking = _isShieldSwordBlocking = false;
         _canCounter2H = false;
         _counter2HWindowCoroutine = null;

@@ -5,6 +5,7 @@ public class PlayerStatPanel : MonoBehaviour
 {
     [SerializeField] private PlayerStats playerStats;
     [SerializeField] private GameObject  panel;
+    [SerializeField] private InventoryUI inventoryUI;
 
     [Header("Core Stats")]
     [SerializeField] private TMP_Text vitText;
@@ -29,6 +30,20 @@ public class PlayerStatPanel : MonoBehaviour
     public void ConnectStats(PlayerStats stats)
     {
         if (stats != null) playerStats = stats;
+    }
+
+    private void Update()
+    {
+        if (!Input.GetKeyDown(KeyCode.Tab)) return;
+        Debug.Log($"[StatPanel] Tab pressed, panel={panel?.name ?? "NULL"} active={panel?.activeSelf}");
+        bool next = !panel.activeSelf;
+        panel.SetActive(next);
+        inventoryUI?.SetVisible(next);
+        if (next)
+        {
+            if (playerStats == null) playerStats = FindObjectOfType<PlayerStats>();
+            if (playerStats != null) Refresh();
+        }
     }
 
     public void SetVisible(bool visible)

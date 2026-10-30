@@ -11,6 +11,9 @@ public class NetworkInventory : NetworkBehaviour
     [SerializeField] private float        pickupRadius   = 2.5f;
     [SerializeField] private int          hotbarSize     = 9;
 
+    [Header("Starting Items")]
+    [SerializeField] private WeaponSO[] startingWeapons = new WeaponSO[0];
+
     // ── Owner-only state ──────────────────────────────────────────
     private Inventory _inv;
     private ItemSO[]  _hotbarItems;
@@ -48,19 +51,52 @@ public class NetworkInventory : NetworkBehaviour
 
     protected override void OnSpawned()
     {
+        Debug.Log($"[NetworkInventory] OnSpawned isOwner={isOwner} go={gameObject.name}");
         if (!isOwner) return;
+        InitOwner();
+    }
 
+    protected override void OnOwnerChanged(PlayerID? oldOwner, PlayerID? newOwner, bool asServer)
+    {
+        if (asServer) return;
+        Debug.Log($"[NetworkInventory] OnOwnerChanged isOwner={isOwner} go={gameObject.name}");
+        if (!isOwner) return;
+        if (_inv == null) InitOwner();
+    }
+
+    private void InitOwner()
+    {
         _inv         = new Inventory { MaxWeight = maxCarryWeight };
         _hotbarItems = new ItemSO[hotbarSize];
         _inv.OnChanged += HandleInventoryChanged;
+        Debug.Log($"[NetworkInventory] InitOwner go={gameObject.name}");
+
+        FindObjectOfType<HotbarController>()?.ConnectInventory(this);
+        FindObjectOfType<InventoryUI>(true)?.ConnectInventory(this);
+
+        for (int i = 0; i < startingWeapons.Length && i < hotbarSize; i++)
+        {
+            if (startingWeapons[i] == null) continue;
+            _inv.TryAdd(startingWeapons[i], 1);
+            _hotbarItems[i] = startingWeapons[i];
+        }
+        if (startingWeapons.Length > 0) BroadcastEquipped();
     }
+
+    private float _autoPickupTimer;
 
     private void Update()
     {
         if (!isOwner) return;
         HandleHotbarInput();
 
-        if (Input.GetKeyDown(KeyCode.F)) CmdPickUp();
+        _autoPickupTimer -= Time.deltaTime;
+        if (_autoPickupTimer <= 0f && WorldItem.FindNearest(transform.position, pickupRadius) != null)
+        {
+            _autoPickupTimer = 0.3f;
+            CmdPickUp();
+        }
+
         if (Input.GetKeyDown(KeyCode.G)) CmdDrop(_selectedIdx);
     }
 
@@ -101,9 +137,6 @@ public class NetworkInventory : NetworkBehaviour
 
         if (owner.HasValue)
             SyncPickupRpc(owner.Value, dbIdx, qty);
-
-        // Sync equipped in case hotbar was empty and this fills it
-        SyncEquipObserversRpc(-1, -1); // will update after owner processes
     }
 
     [TargetRpc]
@@ -111,6 +144,9 @@ public class NetworkInventory : NetworkBehaviour
     {
         ItemSO so = database?.Get(dbIdx);
         if (so == null) return;
+
+        if (_inv == null) { _inv = new Inventory { MaxWeight = maxCarryWeight }; _inv.OnChanged += HandleInventoryChanged; }
+        if (_hotbarItems == null) _hotbarItems = new ItemSO[hotbarSize];
 
         _inv.TryAdd(so, qty);
         AutoAssignToHotbar(so, dbIdx);

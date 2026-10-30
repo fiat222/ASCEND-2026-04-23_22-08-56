@@ -161,6 +161,23 @@ public class EnemyStats : MonoBehaviour, IDamageable
     public bool IsInterrupted => _isInterrupted;
     public bool IsStunned     => _isStunned;
 
+    public void Revive()
+    {
+        StopAllCoroutines();
+        currentHp                  = maxHp;
+        interruptAccum             = 0f;
+        stunAccum                  = 0f;
+        _interruptStacks           = 0;
+        _stunStacks                = 0;
+        _isInterrupted             = false;
+        _isStunned                 = false;
+        _stunImmune                = false;
+        _activeDamageBonus         = 1f;
+        _currentInterruptThreshold = interruptThreshold;
+        _currentStunThreshold      = stunThreshold;
+        RefreshSlider();
+    }
+
     // Called on non-server clients by NetworkEnemyStats to sync host's result
     public void SyncHp(float hp)
     {

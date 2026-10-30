@@ -1,0 +1,6 @@
+  Unity Editor setup needed for Necromancer:
+  1. Create prefab, add NecromancerAI + EnemyStats + Animator
+  2. Animator params: MoveX/Y (float), GetDamaged/Die/Spawn/Scream/Attack_Magic/Revive (trigger)
+  3. Assign ownedSkeletons list in Inspector
+  4. Add animation event OnCastProjectile at cast frame of Attack_Magic clip
+  5. Assign castPoint transform + magicProjectilePrefab

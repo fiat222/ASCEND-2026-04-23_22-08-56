@@ -12,7 +12,6 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private GameObject          slotPrefab;
     [SerializeField] private TMP_Text            weightText;
     [SerializeField] private TMP_Dropdown        categoryFilter;
-    [SerializeField] private PlayerStatPanel     statPanel;
 
     private NetworkInventory         _inventory;
     private readonly List<GameObject> _rows = new();
@@ -45,20 +44,12 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Tab))
-            TogglePanel();
-    }
+    // ── Toggle / Visibility ───────────────────────────────────────
 
-    // ── Toggle ────────────────────────────────────────────────────
-
-    private void TogglePanel()
+    public void SetVisible(bool visible)
     {
-        bool next = !panel.activeSelf;
-        panel.SetActive(next);
-        statPanel?.SetVisible(next);
-        if (next) Refresh();
+        panel.SetActive(visible);
+        if (visible) Refresh();
     }
 
     // ── Refresh ───────────────────────────────────────────────────
